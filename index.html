@@ -254,7 +254,7 @@ textarea { resize: vertical; }
 .chips { display: flex; gap: 6px; flex-wrap: wrap; align-items: center; }
 .bar-inner .nav { overflow-x: auto; scrollbar-width: none; }
 .log-btn { margin-left: auto; white-space: nowrap; }
-.timer { display: flex; align-items: center; gap: 8px; font-weight: 600; font-size: 0.9rem; background: var(--lichen); color: var(--lichen-ink); padding: 3px 4px 3px 10px; border-radius: 999px; margin-left: auto; max-width: 420px; min-width: 0; }
+.timer { display: flex; align-items: center; gap: 8px; font-weight: 600; font-size: 0.9rem; background: var(--lichen); color: var(--lichen-ink); padding: 3px 4px 3px 10px; border-radius: 999px; margin-left: auto; max-width: 340px; min-width: 0; }
 .timer[hidden] { display: none; }
 .timer:not([hidden]) + .log-btn { margin-left: 0; }
 #timerTxt { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
@@ -319,6 +319,29 @@ ol.review h2 { margin-bottom: 4px; }
 .rv-row:first-of-type { border-top: 0; }
 .rv-row > span { flex: 1; min-width: 180px; }
 
+/* Round 5 */
+.page-head .spacer { flex: 1; }
+.lane-toggle { margin-left: auto; }
+table.proj { width: 100%; border-collapse: collapse; font-size: 0.92rem; background: var(--surface); border: 1px solid var(--line); border-radius: 10px; overflow: hidden; }
+table.proj th { text-align: left; font-size: 0.82rem; color: var(--ink-2); font-weight: 600; padding: 7px 10px; background: var(--sunk); border-bottom: 1px solid var(--line); }
+table.proj td { padding: 6px 10px; border-top: 1px solid var(--line); vertical-align: top; }
+table.proj tr.grp td { background: var(--sunk); font-weight: 800; }
+table.proj .pname { background: none; border: 0; padding: 0; font-weight: 600; text-align: left; color: var(--ink); }
+table.proj .pname:hover { text-decoration: underline; }
+.quiet { color: var(--amber); font-weight: 600; }
+.proj-wrap { overflow-x: auto; }
+.focus { position: fixed; inset: 0; z-index: 80; background: var(--paper); display: grid; place-items: center; padding: 24px; }
+.focus[hidden] { display: none; }
+.focus-inner { max-width: 760px; width: 100%; }
+.focus h1 { font-size: clamp(1.8rem, 4vw, 2.8rem); font-weight: 800; line-height: 1.1; letter-spacing: -0.02em; margin: 6px 0 10px; }
+.focus-tag { color: var(--ink-2); font-weight: 600; margin: 0; }
+.focus-note { color: var(--ink-2); font-size: 1.1rem; margin: 0 0 16px; }
+.focus-clock { font-size: 2.4rem; font-weight: 800; margin: 0 0 20px; font-variant-numeric: tabular-nums; }
+.focus-actions { display: flex; gap: 10px; flex-wrap: wrap; }
+.split-bar { display: flex; height: 14px; border-radius: 99px; overflow: hidden; background: var(--sunk); border: 1px solid var(--line); margin: 6px 0 4px; }
+.split-bar .deep { background: var(--moss); }
+.split-bar .drain { background: var(--heather); }
+
 /* Project groups */
 .subbar { flex-basis: 100%; display: flex; gap: 6px; flex-wrap: wrap; padding: 6px 0 0 14px; border-left: 2px solid var(--line); margin-left: 8px; }
 .groups { display: grid; gap: 6px; margin-top: 12px; max-height: 55vh; overflow-y: auto; }
@@ -381,13 +404,14 @@ dialog h2 { margin-bottom: 14px; font-size: 1.25rem; }
     <nav class="nav" aria-label="Sections">
       <a href="#home" data-nav="home">Home</a>
       <a href="#tasks" data-nav="tasks">Tasks</a>
+      <a href="#projects" data-nav="projects">Projects</a>
       <a href="#team" data-nav="team">Team</a>
       <a href="#time" data-nav="time">Time</a>
       <a href="#wins" data-nav="wins">Wins</a>
       <a href="#leave" data-nav="leave">Leave</a>
       <a href="#review" data-nav="review">Review</a>
     </nav>
-    <div class="timer" id="timerBar" hidden><span class="timer-dot"></span><span id="timerTxt"></span><button class="btn btn-sm" id="timerStop">Stop and log</button></div>
+    <div class="timer" id="timerBar" hidden><span class="timer-dot"></span><span id="timerTxt"></span><button class="btn btn-sm" id="timerStop" style="white-space:nowrap">Stop</button></div>
     <button class="btn btn-sm btn-primary log-btn" id="logBtn">Log time</button>
   </div>
 </header>
@@ -415,7 +439,7 @@ dialog h2 { margin-bottom: 14px; font-size: 1.25rem; }
       <button class="btn btn-sm" id="exportBtn">Download a backup</button>
       <button class="btn btn-sm" id="importBtn">Restore from a backup</button>
       <input type="file" id="importFile" accept="application/json,.json" class="sr">
-      <span class="small muted">Your data lives in this browser only. Download a backup before clearing your browser or moving the site.</span>
+      <span class="small muted">Shortcuts: <strong>N</strong> new task, <strong>L</strong> log time, <strong>F</strong> focus, <strong>E</strong> end of day. Your data lives in this browser only. Download a backup before clearing your browser or moving the site.</span>
     </div>
   </section>
 
@@ -446,6 +470,7 @@ dialog h2 { margin-bottom: 14px; font-size: 1.25rem; }
         <section class="lane" data-lane="week" id="lane-week"></section>
         <section class="lane" data-lane="later" id="lane-later"></section>
         <details class="done-wrap" id="doneWrap"></details>
+        <details class="done-wrap" id="snoozeWrap"></details>
       </div>
       <div class="col">
         <section class="lane" id="lane-deadlines" aria-label="Deadlines"></section>
@@ -453,6 +478,19 @@ dialog h2 { margin-bottom: 14px; font-size: 1.25rem; }
         <section class="lane" data-lane="ongoing" id="lane-ongoing"></section>
       </div>
     </div>
+  </section>
+
+  <!-- PROJECTS -->
+  <section class="page" id="page-projects" aria-label="Projects">
+    <div class="page-head"><h1>Projects</h1><span class="spacer"></span><button class="btn btn-sm btn-primary" id="sltBtn">Copy SLT update</button></div>
+    <p class="muted small" style="margin:0 0 10px">Every project at a glance. Quiet projects with open work are flagged after two weeks without activity. Click a name to see its tasks.</p>
+    <div id="projList"></div>
+  </section>
+
+  <!-- END OF DAY -->
+  <section class="page" id="page-day" aria-label="End of day">
+    <div class="page-head"><h1>End of day</h1><span class="muted">Two minutes, then you are done.</span></div>
+    <ol class="review" id="daySteps"></ol>
   </section>
 
   <!-- TEAM -->
@@ -613,6 +651,12 @@ dialog h2 { margin-bottom: 14px; font-size: 1.25rem; }
           <select id="fSize"><option value="">Not set</option><option value="s">Small, up to 2 hours</option><option value="h">Half a day</option><option value="d">A day</option><option value="b">Two days or more</option></select>
         </label>
       </div>
+      <div class="two">
+        <label class="field"><span>Hide until (snooze)</span><input type="date" id="fSnooze"></label>
+        <label class="field"><span>Repeats</span>
+          <select id="fRepeat"><option value="">Does not repeat</option><option value="weekly">Every week</option><option value="fortnightly">Every two weeks</option><option value="monthly">Every month</option></select>
+        </label>
+      </div>
       <label class="check-row"><input type="checkbox" id="fHard"> <span>The date is a hard deadline</span></label>
       <label class="check-row"><input type="checkbox" id="fQuick"> <span>Quick win, under an hour</span></label>
       <label class="check-row"><input type="checkbox" id="fDrain"> <span>Draining (coordination, report writing, line management)</span></label>
@@ -640,6 +684,7 @@ dialog h2 { margin-bottom: 14px; font-size: 1.25rem; }
         <div class="hours-row chips"><input type="number" id="lHours" step="0.25" min="0.25" required style="width:90px"><span class="chips" id="lChips"></span></div>
       </div>
       <label class="field"><span>What you did</span><input type="text" id="lNote" placeholder="Goes in the timesheet description"></label>
+      <label class="check-row"><input type="checkbox" id="lDrain"> <span>Draining work (coordination, reports, line management)</span></label>
       <p class="help" id="lToday"></p>
     </div>
     <div class="dialog-actions">
@@ -649,6 +694,32 @@ dialog h2 { margin-bottom: 14px; font-size: 1.25rem; }
     </div>
   </form>
 </dialog>
+
+<!-- Hard thing dialog -->
+<dialog id="hardDlg" aria-labelledby="hardDlgTitle">
+  <form method="dialog" id="hardForm">
+    <h2 id="hardDlgTitle">Done. What made it hard?</h2>
+    <p class="help" id="hardTitle"></p>
+    <label class="field"><span>One line, optional. It goes into Wins.</span><input type="text" id="hardNote" placeholder="e.g. no standard method, had to rule on allocation first"></label>
+    <div class="dialog-actions"><span class="spacer"></span><button type="button" class="btn" id="hardSkip">Skip</button><button type="submit" class="btn btn-primary">Save to Wins</button></div>
+  </form>
+</dialog>
+
+<!-- Focus mode -->
+<div class="focus" id="focus" hidden role="dialog" aria-modal="true" aria-labelledby="focusTitle">
+  <div class="focus-inner">
+    <p class="focus-tag" id="focusTag"></p>
+    <h1 id="focusTitle"></h1>
+    <p class="focus-note" id="focusNote"></p>
+    <p class="focus-clock" id="focusClock"></p>
+    <div class="focus-actions">
+      <button class="btn btn-primary" id="focusDone">Done</button>
+      <button class="btn" id="focusTimer"></button>
+      <button class="btn" id="focusNext">Next Now task</button>
+      <button class="btn btn-quiet" id="focusExit">Exit (Esc)</button>
+    </div>
+  </div>
+</div>
 
 <!-- Group projects dialog -->
 <dialog id="groupDlg" aria-labelledby="groupDlgTitle">
@@ -850,6 +921,8 @@ function renderLane(lane, items) {
   let html = `<div class="lane-head"><h2>${LANE_NAMES[lane]}</h2><span class="count">${list.length}</span>${info.hint ? `<span class="hint">${info.hint}</span>` : ''}</div>`;
   if (lane === 'now' && list.length > 3) html += `<p class="cap-warn">${list.length} things in Now. Move some down so the top three stay clear.</p>`;
   if (lane === 'week') html += capHTML(myCapacity());
+  if (lane === 'later') { html = html.replace('</div>', `<button class="btn btn-sm btn-quiet lane-toggle" id="laterToggle">${laterOpen ? 'Hide' : 'Show'}</button></div>`); if (!laterOpen) { el.innerHTML = html; return; } }
+  if (lane === 'now' && list.length) html = html.replace('</div>', `<button class="btn btn-sm lane-toggle" id="focusBtn">Focus</button></div>`);
   html += list.length ? `<ul class="items">${list.map(t => itemHTML(t, { triage: lane === 'inbox', timer: ['now', 'week', 'ongoing'].includes(lane) })).join('')}</ul>` : `<p class="lane-empty">${info.empty}</p>`;
   el.innerHTML = html;
   if (lane === 'inbox') el.hidden = !list.length;
@@ -868,7 +941,7 @@ function renderTasks() {
   bar += `<span class="spacer"></span>${allTags.length ? '<button class="btn btn-sm" id="groupBtn">Group projects</button>' : ''}<button class="btn btn-sm" id="copyBtn">Copy for Claude</button><button class="btn btn-sm" id="updateBtn">Download update for Claude</button>`;
   if (subs.length) bar += `<div class="subbar">${chip(curTop, 'All of ' + curTop, tagFilter === curTop)}${[...new Set(subs.map(x => x.split('/')[0]))].map(x => chip(curTop + '/' + x, x, tagFilter === curTop + '/' + x || (tagFilter || '').startsWith(curTop + '/' + x + '/'))).join('')}</div>`;
   $('#toolbar').innerHTML = bar;
-  const vis = T.items.filter(t => !t.owner && !(t.lane === 'done' && t.cleared) && tagMatch(t.tag, tagFilter));
+  const vis = T.items.filter(t => !t.owner && !(t.lane === 'done' && t.cleared) && !isSnoozed(t) && tagMatch(t.tag, tagFilter));
   ['inbox', 'now', 'week', 'later', 'waiting', 'ongoing'].forEach(l => renderLane(l, vis.filter(t => t.lane === l)));
 
   // Deadlines
@@ -886,14 +959,29 @@ function renderTasks() {
   const wasOpen = $('#doneWrap').open;
   $('#doneWrap').innerHTML = `<summary>Done (${done.length})</summary>` + (done.length ? `<ul class="items">${done.slice(0, 40).map(t => itemHTML(t)).join('')}</ul><p><button class="btn btn-sm btn-quiet btn-danger" id="clearDone">Clear done tasks</button></p>` : '<p class="lane-empty">Ticked tasks land here.</p>');
   $('#doneWrap').open = wasOpen;
+  const sn = T.items.filter(t => !t.owner && isSnoozed(t) && tagMatch(t.tag, tagFilter)).sort((a, b) => a.snooze.localeCompare(b.snooze));
+  const sOpen = $('#snoozeWrap').open;
+  $('#snoozeWrap').hidden = !sn.length;
+  $('#snoozeWrap').innerHTML = `<summary>Snoozed (${sn.length})</summary><ul class="items">${sn.map(t => itemHTML(t).replace('<span class="item-meta">', `<span class="item-meta"><span class="due">Back ${fmt(t.snooze)}</span>`)).join('')}</ul>`;
+  $('#snoozeWrap').open = sOpen;
 }
 
 function completeTask(t) {
   if (t.lane === 'ongoing') { t.weekDone = t.weekDone === thisWeek() ? null : thisWeek(); saveTasks(); return; }
   if (t.lane === 'done') { t.lane = t.prevLane || 'week'; t.doneAt = null; saveTasks(); return; }
-  t.prevLane = t.lane; t.lane = 'done'; t.doneAt = todayS();
+  t.prevLane = t.lane; t.lane = 'done'; t.doneAt = todayS(); t.updated = todayS();
+  if (T.timer && T.timer.taskId === t.id) stopTimer(true);
+  let next = null;
+  if (t.repeat) {
+    const base = parseD(t.due && t.due >= todayS() ? t.due : todayS());
+    const nd = t.repeat === 'weekly' ? addDays(base, 7) : t.repeat === 'fortnightly' ? addDays(base, 14) : new Date(base.getFullYear(), base.getMonth() + 1, base.getDate(), 12);
+    next = Object.assign({}, t, { id: uid(), lane: t.prevLane === 'now' ? 'week' : t.prevLane, due: ymd(nd), doneAt: null, created: todayS(), updated: todayS(), star: false, winNote: '', cleared: false });
+    const sn = ymd(mondayOf(nd)); next.snooze = sn > todayS() ? sn : null;
+    T.items.push(next);
+  }
   saveTasks();
-  toast('Done', 'Undo', () => { t.lane = t.prevLane; t.doneAt = null; saveTasks(); });
+  toast(next ? `Done. Next one set for ${fmt(next.due)}` : 'Done', 'Undo', () => { t.lane = t.prevLane; t.doneAt = null; if (next) T.items.splice(T.items.indexOf(next), 1); saveTasks(); });
+  if (!t.owner && (t.size === 'd' || t.size === 'b')) openHard(t);
 }
 
 function moveTask(t, lane) {
@@ -901,7 +989,7 @@ function moveTask(t, lane) {
   if (lane === 'waiting' && !t.since) t.since = todayS();
   if (lane !== 'waiting') t.since = null;
   if (lane === 'done') { t.prevLane = t.lane; t.doneAt = todayS(); }
-  t.lane = lane;
+  t.lane = lane; t.updated = todayS();
   saveTasks();
   if (lane === 'waiting' && !t.who) openTask(t.id, 'fWho');
 }
@@ -915,6 +1003,7 @@ function openTask(id, focusId) {
   $('#fHard').checked = !!t.hard; $('#fQuick').checked = !!t.quick; $('#fDrain').checked = !!t.drain;
   $('#fOwner').innerHTML = `<option value="">Me</option>` + T.team.map(m => `<option value="${esc(m.name)}">${esc(m.name)}</option>`).join('');
   $('#fOwner').value = t.owner || ''; $('#fSize').value = t.size || '';
+  $('#fSnooze').value = t.snooze || ''; $('#fRepeat').value = t.repeat || '';
   $('#taskDlg').showModal();
   if (focusId) $('#' + focusId).focus();
 }
@@ -922,7 +1011,7 @@ $('#taskForm').addEventListener('submit', e => {
   const t = findTask(editingId); if (!t) return;
   const title = $('#fTitle').value.trim(); if (!title) { e.preventDefault(); return; }
   const newLane = $('#fLane').value;
-  Object.assign(t, { title, note: $('#fNote').value.trim(), tag: normTag($('#fTag').value), due: $('#fDue').value || null, who: $('#fWho').value.trim(), hard: $('#fHard').checked, quick: $('#fQuick').checked, drain: $('#fDrain').checked, owner: $('#fOwner').value, size: $('#fSize').value });
+  Object.assign(t, { title, note: $('#fNote').value.trim(), tag: normTag($('#fTag').value), due: $('#fDue').value || null, who: $('#fWho').value.trim(), hard: $('#fHard').checked, quick: $('#fQuick').checked, drain: $('#fDrain').checked, owner: $('#fOwner').value, size: $('#fSize').value, snooze: $('#fSnooze').value || null, repeat: $('#fRepeat').value, updated: todayS() });
   if (newLane !== t.lane) moveTaskQuiet(t, newLane);
   editingId = null; saveTasks(); toast('Task saved');
 });
@@ -1038,6 +1127,8 @@ $('#page-tasks').addEventListener('click', e => {
   const chip = e.target.closest('[data-tag]');
   if (chip) { tagFilter = chip.dataset.tag || null; renderTasks(); return; }
   if (e.target.id === 'copyBtn') { copyForClaude(); return; }
+  if (e.target.id === 'laterToggle') { laterOpen = !laterOpen; renderTasks(); return; }
+  if (e.target.id === 'focusBtn') { openFocus(); return; }
   if (e.target.id === 'updateBtn') { downloadUpdate(); return; }
   if (e.target.id === 'groupBtn') { openGroups(); return; }
   if (e.target.id === 'clearDone') {
@@ -1446,7 +1537,7 @@ function myAvailable(mon) {
   return Math.max(0, base - off);
 }
 function capacityFor(owner, avail, mon) {
-  const items = T.items.filter(t => (t.owner || '') === owner && (t.lane === 'now' || t.lane === 'week'));
+  const items = T.items.filter(t => (t.owner || '') === owner && (t.lane === 'now' || t.lane === 'week') && !(t.snooze && t.snooze > ymd(addDays(parseD(mon), 4))));
   const load = items.reduce((a, t) => a + (SIZE_DAYS[t.size] || 0), 0);
   return { monday: mon, avail, load, unsized: items.filter(t => !t.size).length };
 }
@@ -1470,20 +1561,20 @@ setInterval(renderTimer, 30000);
 function toggleTimer(t) {
   if (T.timer && T.timer.taskId === t.id) { stopTimer(); return; }
   if (T.timer) stopTimer(true);
-  T.timer = { taskId: t.id, title: t.title, tag: t.tag || '', start: Date.now() };
+  T.timer = { taskId: t.id, title: t.title, tag: t.tag || '', drain: !!t.drain, start: Date.now() };
   store(TKEY, T); renderAll(); toast(`Timing ${t.title}`);
 }
 function stopTimer(silent) {
   if (!T.timer) return;
   const hrs = Math.max(0.25, Math.round((Date.now() - T.timer.start) / 900000) / 4);
   const tm = T.timer; T.timer = null; store(TKEY, T); renderAll();
-  if (silent) { T.time.push({ id: uid(), date: todayS(), tag: tm.tag, taskId: tm.taskId, hours: hrs, note: tm.title }); store(TKEY, T); toast(`Logged ${num(hrs)} h on ${tm.title}`); return; }
-  openLog({ tag: tm.tag, hours: hrs, note: tm.title, taskId: tm.taskId });
+  if (silent) { T.time.push({ id: uid(), date: todayS(), tag: tm.tag, taskId: tm.taskId, hours: hrs, note: tm.title, drain: !!tm.drain }); store(TKEY, T); toast(`Logged ${num(hrs)} h on ${tm.title}`); return; }
+  openLog({ tag: tm.tag, hours: hrs, note: tm.title, taskId: tm.taskId, drain: tm.drain });
 }
 let logCtx = null;
 function openLog(pre = {}) {
   logCtx = pre;
-  $('#lDate').value = pre.date || todayS(); $('#lTag').value = pre.tag || ''; $('#lHours').value = pre.hours || ''; $('#lNote').value = pre.note || '';
+  $('#lDate').value = pre.date || todayS(); $('#lTag').value = pre.tag || ''; $('#lHours').value = pre.hours || ''; $('#lNote').value = pre.note || ''; $('#lDrain').checked = !!pre.drain;
   $('#lChips').innerHTML = [0.5, 1, 2, 3.5, T.settings.hoursPerDay].map(h => `<button type="button" class="chip-btn" data-h="${h}">${num(h)} h</button>`).join('');
   const today = T.time.filter(e => e.date === todayS()).reduce((a, e) => a + e.hours, 0);
   $('#lToday').textContent = `Logged today so far: ${num(today)} of ${num(T.settings.hoursPerDay)} hours.`;
@@ -1494,7 +1585,7 @@ $('#lChips').addEventListener('click', e => { const b = e.target.closest('[data-
 $('#logForm').addEventListener('submit', e => {
   const hours = parseFloat($('#lHours').value), date = $('#lDate').value;
   if (!hours || hours <= 0 || !date) { e.preventDefault(); toast('Add the hours and date.'); return; }
-  T.time.push({ id: uid(), date, tag: normTag($('#lTag').value), taskId: (logCtx && logCtx.taskId) || null, hours, note: $('#lNote').value.trim() });
+  T.time.push({ id: uid(), date, tag: normTag($('#lTag').value), taskId: (logCtx && logCtx.taskId) || null, hours, note: $('#lNote').value.trim(), drain: $('#lDrain').checked });
   store(TKEY, T); renderAll(); toast(`Logged ${num(hours)} h`);
 });
 $('#lCancel').onclick = () => $('#logDlg').close();
@@ -1690,6 +1781,11 @@ function renderReview() {
   const days = []; for (let i = 0; i < 5; i++) { const k = ymd(addDays(parseD(mon), i)); const h = T.time.filter(e => e.date === k).reduce((a, e) => a + e.hours, 0); const off = BH.has(k) || L.trips.some(t => k >= t.start && k <= t.end && (t.days || {})[k] !== 'work'); if (!off && !h && k <= todayS()) days.push(fmt(k)); }
   const pending = Object.keys(g).filter(tag => !T.entered[sheetKey(mon, tag)]);
   steps.push({ ok: !pending.length && !days.length, h: 'Timesheets', b: (days.length ? `<p class="help"><strong>No time logged on ${days.join(', ')}.</strong> <button class="btn btn-sm" data-rv="log">Log time</button></p>` : '') + (Object.keys(g).length ? Object.keys(g).sort().map(tag => sheetBlock(mon, tag, g[tag], true)).join('') : '<p class="help">No time logged this week.</p>') });
+  // time split
+  const wkE = weekEntries(mon), tot = wkE.reduce((a, e) => a + e.hours, 0), dr = wkE.filter(e => e.drain).reduce((a, e) => a + e.hours, 0);
+  const prevE = weekEntries(ymd(addDays(parseD(mon), -7))), pTot = prevE.reduce((a, e) => a + e.hours, 0), pDr = prevE.filter(e => e.drain).reduce((a, e) => a + e.hours, 0);
+  const pct = tot ? Math.round(dr / tot * 100) : 0, pPct = pTot ? Math.round(pDr / pTot * 100) : null;
+  steps.push({ ok: true, h: 'Where your time went', b: tot ? `<div class="split-bar"><span class="deep" style="width:${100 - pct}%"></span><span class="drain" style="width:${pct}%"></span></div><p class="help">${num(tot - dr)} h deep work, ${num(dr)} h draining (${pct}%).${pPct !== null ? ` Last week: ${pPct}%.` : ''}${pct >= 40 ? ' <strong>Draining work is taking a big share. Worth asking what could be handed off or dropped.</strong>' : ''}</p>` : '<p class="help">No time logged this week, so nothing to show yet.</p>' });
   // 3 chase
   const stale = T.items.filter(t => !t.owner && t.lane === 'waiting' && t.since && diffDays(t.since, todayS()) >= 5);
   steps.push({ ok: !stale.length, h: `Chase (${stale.length})`, b: stale.length ? stale.map(t => `<div class="rv-row" data-id="${t.id}"><span><strong>${esc(t.who || 'Someone')}</strong>: ${esc(t.title)}, ${waitText(t.since)}</span><button class="btn btn-sm" data-rv="chased">Chased today</button><button class="btn btn-sm" data-rv="arrived">It arrived</button></div>`).join('') : '<p class="help">Nothing waiting more than five days.</p>' });
@@ -1743,6 +1839,7 @@ function renderNudges() {
   const todayH = T.time.filter(e => e.date === todayS()).reduce((a, e) => a + e.hours, 0);
   const onLeave = L.trips.some(t => todayS() >= t.start && todayS() <= t.end) || BH.has(todayS());
   if (dw >= 1 && dw <= 5 && !onLeave) n.push([todayH ? '' : 'warn', T.timer ? `Timing: ${T.timer.title}. Logged today: ${num(todayH)} h.` : `Logged today: ${num(todayH)} of ${num(T.settings.hoursPerDay)} hours.`, 'log', 'Log time']);
+  if (dw >= 1 && dw <= 5 && !onLeave && new Date().getHours() >= 15 && T.lastShutdown !== todayS()) n.push(['', 'Wrapping up? Two minutes to close the day and set tomorrow.', 'day', 'End of day']);
   const miss = unenteredSheets().filter(m => m.monday < ymd(mondayOf(d)));
   if (miss.length) n.push(['warn', `${plural(miss.length, 'timesheet')} from earlier weeks not filled in yet.`, 'time', 'Open timesheets']);
   const stale = T.items.filter(t => !t.owner && t.lane === 'waiting' && t.since && diffDays(t.since, todayS()) >= 5);
@@ -1752,14 +1849,150 @@ function renderNudges() {
   $('#nudges').innerHTML = n.map(([cls, txt, go, btn]) => `<div class="nudge ${cls}"><span>${esc(txt)}</span><span class="spacer"></span><button class="btn btn-sm" data-nudge="${go}">${btn}</button></div>`).join('');
 }
 
+/* ---------- Round 5: snooze, focus, shortcuts, projects, end of day ---------- */
+const isSnoozed = t => t.lane !== 'done' && t.snooze && t.snooze > todayS();
+let laterOpen = false;
+
+/* What made it hard */
+let hardId = null;
+function openHard(t) { hardId = t.id; $('#hardTitle').textContent = t.title; $('#hardNote').value = ''; $('#hardDlg').showModal(); setTimeout(() => $('#hardNote').focus(), 30); }
+$('#hardForm').addEventListener('submit', () => { const t = findTask(hardId); const v = $('#hardNote').value.trim(); if (t && v) { t.winNote = v; t.star = true; store(TKEY, T); toast('Saved to Wins'); } hardId = null; });
+$('#hardSkip').onclick = () => { $('#hardDlg').close(); hardId = null; };
+
+/* Focus mode */
+let focusId = null, focusTick = null;
+function focusList() { return T.items.filter(t => !t.owner && t.lane === 'now' && !isSnoozed(t)); }
+function openFocus(id) {
+  const list = focusList(); if (!list.length) { toast('Nothing in Now to focus on.'); return; }
+  focusId = id && list.some(t => t.id === id) ? id : (T.timer && list.some(t => t.id === T.timer.taskId) ? T.timer.taskId : list[0].id);
+  const t = findTask(focusId);
+  if (!T.timer || T.timer.taskId !== t.id) toggleTimer(t);
+  $('#focus').hidden = false; renderFocus();
+  clearInterval(focusTick); focusTick = setInterval(renderFocus, 1000);
+}
+function renderFocus() {
+  const t = findTask(focusId); if (!t) { closeFocus(); return; }
+  $('#focusTag').textContent = t.tag ? tagLabel(t.tag) : '';
+  $('#focusTitle').textContent = t.title;
+  $('#focusNote').textContent = [(t.note || '').replace(/[.\s]+$/, ''), t.due ? `${t.hard ? 'Deadline' : 'Aim for'} ${fmt(t.due)}` : ''].filter(Boolean).join('. ');
+  const on = T.timer && T.timer.taskId === t.id;
+  if (on) { const s = Math.floor((Date.now() - T.timer.start) / 1000); $('#focusClock').textContent = `${Math.floor(s / 3600)}:${pad(Math.floor(s / 60) % 60)}:${pad(s % 60)}`; }
+  else $('#focusClock').textContent = 'Timer paused';
+  $('#focusTimer').textContent = on ? 'Stop timer and log' : 'Start timer';
+  $('#focusNext').hidden = focusList().length < 2;
+}
+function closeFocus() { $('#focus').hidden = true; clearInterval(focusTick); focusId = null; renderAll(); }
+$('#focusExit').onclick = closeFocus;
+$('#focusDone').onclick = () => { const t = findTask(focusId); closeFocus(); if (t) completeTask(t); };
+$('#focusTimer').onclick = () => { const t = findTask(focusId); if (!t) return; if (T.timer && T.timer.taskId === t.id) { closeFocus(); stopTimer(); } else { toggleTimer(t); renderFocus(); } };
+$('#focusNext').onclick = () => { const l = focusList(); const i = l.findIndex(t => t.id === focusId); openFocus(l[(i + 1) % l.length].id); };
+
+/* Keyboard shortcuts */
+document.addEventListener('keydown', e => {
+  if (e.key === 'Escape' && !$('#focus').hidden) { closeFocus(); return; }
+  if (e.ctrlKey || e.metaKey || e.altKey) return;
+  const tag = (e.target.tagName || '').toLowerCase();
+  if (['input', 'textarea', 'select'].includes(tag) || document.querySelector('dialog[open]') || !$('#focus').hidden) return;
+  const k = e.key.toLowerCase();
+  if (k === 'n' || k === '/') { e.preventDefault(); location.hash = 'tasks'; setTimeout(() => $('#dumpInput').focus(), 50); }
+  else if (k === 'l') { e.preventDefault(); openLog(); }
+  else if (k === 'f') { e.preventDefault(); openFocus(); }
+  else if (k === 'e') { e.preventDefault(); location.hash = 'day'; }
+});
+
+/* Projects */
+function projectRows() {
+  const rows = {};
+  const get = tag => rows[tag] = rows[tag] || { tag, open: 0, now: 0, waiting: 0, george: 0, next: null, last: '', mon: 0, prev: 0 };
+  const m0 = todayS().slice(0, 7), pm = ymd(new Date(todayD().getFullYear(), todayD().getMonth() - 1, 1, 12)).slice(0, 7);
+  T.items.forEach(t => {
+    if (!t.tag) return; const r = get(t.tag);
+    if (t.lane !== 'done') { r.open++; if (t.lane === 'now' || t.lane === 'week') r.now++; if (t.lane === 'waiting') r.waiting++; if (t.owner) r.george++; if (t.due && (!r.next || t.due < r.next.due)) r.next = t; }
+    [t.created, t.updated, t.doneAt].forEach(d => { if (d && d > r.last) r.last = d; });
+  });
+  T.time.forEach(e => { if (!e.tag) return; const r = get(e.tag); if (e.date > r.last) r.last = e.date; if (e.date.startsWith(m0)) r.mon += e.hours; if (e.date.startsWith(pm)) r.prev += e.hours; });
+  return Object.values(rows);
+}
+function renderProjects() {
+  const rows = projectRows();
+  if (!rows.length) { $('#projList').innerHTML = '<p class="empty-note">No projects yet. Tag tasks with #Group/Project and they appear here.</p>'; return; }
+  const byTop = {}; rows.forEach(r => (byTop[tagTop(r.tag)] = byTop[tagTop(r.tag)] || []).push(r));
+  let h = '<div class="proj-wrap"><table class="proj"><thead><tr><th>Project</th><th>Open</th><th>This week</th><th>Waiting</th><th>Next date</th><th>Hours this month</th><th>Last activity</th></tr></thead><tbody>';
+  Object.keys(byTop).sort().forEach(top => {
+    h += `<tr class="grp"><td colspan="7">${esc(top)}</td></tr>`;
+    byTop[top].sort((a, b) => a.tag.localeCompare(b.tag)).forEach(r => {
+      const quiet = r.open && r.last && diffDays(r.last, todayS()) >= 14;
+      const sub = r.tag.slice(top.length + 1) || top;
+      h += `<tr><td><button class="pname" data-ptag="${esc(r.tag)}">${esc(tagLabel(sub))}</button>${r.george ? ` <span class="owner">${r.george} with team</span>` : ''}</td><td>${r.open}</td><td>${r.now}</td><td>${r.waiting || ''}</td><td>${r.next ? `${fmt(r.next.due)}${r.next.hard ? ' <span class="due hard">Hard</span>' : ''}` : ''}</td><td>${r.mon ? num(r.mon) + ' h' : ''}${r.prev ? ` <span class="muted small">(${num(r.prev)} last month)</span>` : ''}</td><td class="${quiet ? 'quiet' : ''}">${r.last ? (quiet ? `Quiet for ${diffDays(r.last, todayS())} days` : fmt(r.last)) : ''}</td></tr>`;
+    });
+  });
+  $('#projList').innerHTML = h + '</tbody></table></div>';
+}
+$('#page-projects').addEventListener('click', e => {
+  const b = e.target.closest('[data-ptag]'); if (b) { tagFilter = b.dataset.ptag; location.hash = 'tasks'; return; }
+  if (e.target.id === 'sltBtn') copyText(sltUpdate(), 'SLT update copied.');
+});
+function sltUpdate() {
+  const mon = ymd(mondayOf(todayD())), d = todayD();
+  const tops = {};
+  T.items.forEach(t => { if (t.tag) (tops[tagTop(t.tag)] = tops[tagTop(t.tag)] || []).push(t); });
+  let out = `Data and Carbon Solutions update, week of ${fmt(mon, true)}\n`;
+  Object.keys(tops).sort().forEach(top => {
+    const items = tops[top];
+    const subs = [...new Set(items.map(t => t.tag))].sort();
+    let block = '';
+    subs.forEach(tag => {
+      const its = items.filter(t => t.tag === tag);
+      const done = its.filter(t => t.lane === 'done' && t.doneAt >= mon);
+      const doing = its.filter(t => (t.lane === 'now' || t.lane === 'week') && !isSnoozed(t));
+      const wait = its.filter(t => t.lane === 'waiting');
+      const nextD = its.filter(t => t.lane !== 'done' && t.due).sort((a, b) => a.due.localeCompare(b.due))[0];
+      if (!done.length && !doing.length && !wait.length) return;
+      const nm = tag.slice(top.length + 1) || top;
+      block += `\n${tagLabel(nm)}\n`;
+      if (done.length) block += `- Done: ${done.map(t => t.title + (t.owner ? ` (${t.owner})` : '')).join('; ')}\n`;
+      if (doing.length) block += `- In progress: ${doing.map(t => t.title + (t.owner ? ` (${t.owner})` : '')).join('; ')}\n`;
+      if (wait.length) block += `- Waiting on: ${wait.map(t => `${t.who || 'someone'} for ${t.title}`).join('; ')}\n`;
+      if (nextD) block += `- Next date: ${fmt(nextD.due)}, ${nextD.title}\n`;
+    });
+    if (block) out += `\n${top}\n${block}`;
+  });
+  return out;
+}
+
+/* End of day */
+function renderDay() {
+  const today = todayS();
+  const h = T.time.filter(e => e.date === today).reduce((a, e) => a + e.hours, 0);
+  const open = T.items.filter(t => !t.owner && (t.lane === 'now' || t.lane === 'week') && !isSnoozed(t));
+  const doneToday = T.items.filter(t => !t.owner && t.lane === 'done' && t.doneAt === today);
+  const steps = [];
+  steps.push({ ok: !!doneToday.length, h: `Tick off what you finished${doneToday.length ? ` (${doneToday.length} done today)` : ''}`, b: open.filter(t => t.lane === 'now').length || open.length ? `<ul class="items">${open.filter(t => t.lane === 'now').concat(open.filter(t => t.lane === 'week')).map(t => itemHTML(t)).join('')}</ul>` : '<p class="help">Nothing open in Now or This week.</p>' });
+  steps.push({ ok: h >= T.settings.hoursPerDay * 0.75, h: `Time today: ${num(h)} of ${num(T.settings.hoursPerDay)} hours`, b: `${T.timer ? `<p class="help"><strong>A timer is still running on ${esc(T.timer.title)}.</strong> <button class="btn btn-sm" data-dy="stop">Stop and log</button></p>` : ''}<button class="btn btn-sm" data-dy="log">Log time</button>` });
+  const week = T.items.filter(t => !t.owner && t.lane === 'week' && !isSnoozed(t));
+  const now = T.items.filter(t => !t.owner && t.lane === 'now' && !isSnoozed(t));
+  steps.push({ ok: now.length > 0 && now.length <= 3, h: `Pick tomorrow's Now (${now.length} chosen)`, b: now.concat(week).map(t => `<div class="rv-row" data-id="${t.id}"><span>${esc(t.title)}${t.due ? ` <span class="small muted">${fmt(t.due)}</span>` : ''}</span><button class="btn btn-sm${t.lane === 'now' ? ' btn-primary' : ''}" data-dy="now">${t.lane === 'now' ? 'In Now' : 'Put in Now'}</button></div>`).join('') || '<p class="help">This week is empty. Pull something up from Later on Tasks.</p>' });
+  steps.push({ ok: T.lastShutdown === today, h: 'Close the day', b: `<button class="btn btn-primary" data-dy="close">${T.lastShutdown === today ? 'Day closed' : 'Close the day'}</button>` });
+  $('#daySteps').innerHTML = steps.map(st => `<li class="${st.ok ? 'ok' : ''}"><h2>${st.h}</h2>${st.b}</li>`).join('');
+}
+$('#page-day').addEventListener('click', e => {
+  const b = e.target.closest('[data-dy]');
+  if (!b) { taskAction(e); return; }
+  const k = b.dataset.dy;
+  if (k === 'log') openLog();
+  if (k === 'stop') stopTimer();
+  if (k === 'close') { T.lastShutdown = todayS(); store(TKEY, T); renderAll(); toast('Day closed. See you tomorrow.'); }
+  if (k === 'now') { const t = findTask(b.closest('[data-id]').dataset.id); moveTaskQuiet(t, t.lane === 'now' ? 'week' : 'now'); saveTasks(); }
+});
+
 /* ---------- Routing ---------- */
-const PAGES = ['home', 'tasks', 'team', 'time', 'wins', 'leave', 'review'];
-const PAGE_TITLES = { tasks: 'Tasks', team: 'Team', time: 'Timesheets', wins: 'Wins', leave: 'Leave', review: 'Friday review' };
+const PAGES = ['home', 'tasks', 'projects', 'team', 'time', 'wins', 'leave', 'review', 'day'];
+const PAGE_TITLES = { projects: 'Projects', day: 'End of day', tasks: 'Tasks', team: 'Team', time: 'Timesheets', wins: 'Wins', leave: 'Leave', review: 'Friday review' };
 let page = 'home';
 function route() {
   const h = location.hash.slice(1);
   page = PAGES.includes(h) ? h : 'home';
-  PAGES.forEach(p => { $('#page-' + p).classList.toggle('on', p === page); const a = $(`[data-nav="${p}"]`); if (p === page) a.setAttribute('aria-current', 'page'); else a.removeAttribute('aria-current'); });
+  PAGES.forEach(p => { $('#page-' + p).classList.toggle('on', p === page); const a = $(`[data-nav="${p}"]`); if (!a) return; if (p === page) a.setAttribute('aria-current', 'page'); else a.removeAttribute('aria-current'); });
   document.title = page === 'home' ? 'Planner' : `${PAGE_TITLES[page]} | Planner`;
   renderAll();
 }
@@ -1767,6 +2000,8 @@ function renderAll() {
   renderTimer();
   if (page === 'home') renderHome();
   if (page === 'team') renderTeam();
+  if (page === 'projects') renderProjects();
+  if (page === 'day') renderDay();
   if (page === 'time') renderTime();
   if (page === 'wins') renderWins();
   if (page === 'review') renderReview();
