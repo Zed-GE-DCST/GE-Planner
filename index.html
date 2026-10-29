@@ -247,8 +247,30 @@ textarea { resize: vertical; }
 .days5 label { display: flex; flex-direction: column; gap: 3px; font-size: 0.82rem; font-weight: 600; color: var(--ink-2); }
 .help { font-size: 0.86rem; color: var(--ink-2); margin: 0; }
 
+/* Trip day editor */
+.paint { display: flex; gap: 6px; align-items: center; flex-wrap: wrap; margin-bottom: 6px; }
+.paint-btn { border: 1px solid var(--line); background: var(--surface); border-radius: 999px; padding: 2px 10px; font-weight: 600; font-size: 0.86rem; }
+.paint-btn[aria-checked="true"] { background: var(--ink); color: var(--paper); border-color: var(--ink); }
+.dgrid { display: grid; grid-template-columns: repeat(7, 1fr); gap: 3px; }
+.dgrid .hd { font-size: 0.74rem; color: var(--ink-3); text-align: center; font-weight: 600; }
+.dc { font-size: 0.8rem; text-align: center; padding: 5px 0; border-radius: 6px; border: 1px solid transparent; background: none; }
+.dc.out { color: var(--line); }
+.dc.we { color: var(--ink-3); }
+.dc.bhc { color: var(--ink-2); box-shadow: inset 0 0 0 1.5px var(--ink-2); font-weight: 800; }
+button.dc { cursor: pointer; font-weight: 600; }
+.dc.off { background: var(--moss-tint); border-color: var(--moss); }
+.dc.work { background: var(--surface); border: 1.5px dashed var(--ink-2); }
+.dc.unpaid { background: repeating-linear-gradient(45deg, var(--heather-tint), var(--heather-tint) 4px, var(--surface) 4px, var(--surface) 8px); border-color: var(--heather); color: var(--heather); }
+.range-row { display: flex; gap: 6px; align-items: center; flex-wrap: wrap; margin-top: 8px; }
+.d.trip-work { box-shadow: inset 0 0 0 1.5px var(--c); }
+.d.unpaid { background: repeating-linear-gradient(45deg, color-mix(in srgb, var(--c) 45%, var(--surface)), color-mix(in srgb, var(--c) 45%, var(--surface)) 3px, var(--surface) 3px, var(--surface) 6px); }
+.lg-work { box-shadow: inset 0 0 0 1.5px var(--ink-2); }
+.lg-unpaid { background: repeating-linear-gradient(45deg, var(--heather), var(--heather) 2px, var(--surface) 2px, var(--surface) 4px); }
+.carry { display: inline-flex; align-items: center; gap: 6px; }
+.carry input { width: 70px; }
+
 /* Dialog and toast */
-dialog { border: 1px solid var(--line); border-radius: 16px; padding: 22px; width: min(520px, calc(100vw - 32px)); background: var(--surface); color: var(--ink); }
+dialog { border: 1px solid var(--line); border-radius: 16px; padding: 18px; width: min(560px, calc(100vw - 32px)); max-height: calc(100vh - 32px); background: var(--surface); color: var(--ink); }
 dialog::backdrop { background: rgba(20, 28, 30, .45); }
 dialog h2 { margin-bottom: 14px; font-size: 1.25rem; }
 .form-grid { display: grid; gap: 12px; }
@@ -391,7 +413,7 @@ dialog h2 { margin-bottom: 14px; font-size: 1.25rem; }
       <summary>Working pattern and allowance</summary>
       <div class="pattern-body">
         <div class="two">
-          <label class="field"><span>Annual leave allowance (days)</span><input type="number" id="sAllow" step="0.1" min="0"></label>
+          <label class="field"><span>Standard yearly allowance (days)</span><input type="number" id="sAllow" step="0.1" min="0"></label>
           <label class="field"><span>Leave year starts in</span><select id="sStart"></select></label>
         </div>
         <div class="radio-card">
@@ -455,6 +477,24 @@ dialog h2 { margin-bottom: 14px; font-size: 1.25rem; }
         <label class="field"><span>Last day off</span><input type="date" id="eEnd" required></label>
       </div>
       <div class="field"><span>Colour</span><div class="swatches" id="eSwatches" role="radiogroup" aria-label="Colour"></div></div>
+      <div class="field">
+        <span>Days in this trip</span>
+        <div class="paint" role="radiogroup" aria-label="What a click sets">
+          <span class="small muted">Click a day to set it as</span>
+          <button type="button" class="paint-btn" data-paint="off" aria-checked="true">Leave</button>
+          <button type="button" class="paint-btn" data-paint="work" aria-checked="false">Working</button>
+          <button type="button" class="paint-btn" data-paint="unpaid" aria-checked="false">Unpaid</button>
+        </div>
+        <div class="dgrid" id="eDays"></div>
+        <div class="range-row">
+          <span class="small muted">Or set a stretch:</span>
+          <input type="date" id="rFrom" aria-label="From">
+          <input type="date" id="rTo" aria-label="To">
+          <select id="rAs" aria-label="Set as"><option value="unpaid">as unpaid</option><option value="work">as working</option><option value="off">as leave</option></select>
+          <button type="button" class="btn btn-sm" id="rApply">Apply</button>
+        </div>
+        <p class="preview-days" id="eLive" aria-live="polite"></p>
+      </div>
       <label class="field"><span>Leave days used (leave blank to calculate)</span><input type="number" id="eOverride" step="0.5" min="0" placeholder=""></label>
       <p class="help" id="eCalc"></p>
     </div>
@@ -777,55 +817,77 @@ const currentLY = () => leaveYearOf(todayS());
 if (!L.viewYear) L.viewYear = currentLY();
 
 // Core count. Works week by week (Mon to Fri). Bank holidays are never workable days.
-function tripWeeks(start, end) {
+function tripWeeks(start, end, marks) {
+  marks = marks || {};
   const s = parseD(start), e = parseD(end), out = [];
   for (let m = mondayOf(s); m <= e; m = addDays(m, 7)) {
     const days = [];
-    for (let i = 0; i < 5; i++) { const d = addDays(m, i), k = ymd(d); days.push({ k, i, bh: BH.has(k), off: d >= s && d <= e }); }
+    for (let i = 0; i < 5; i++) {
+      const d = addDays(m, i), k = ymd(d), inTrip = d >= s && d <= e;
+      days.push({ k, i, bh: BH.has(k), inTrip, off: inTrip && marks[k] !== 'work', work: inTrip && marks[k] === 'work', unpaid: inTrip && marks[k] === 'unpaid' });
+    }
     const workable = days.filter(d => !d.bh);
     const off = workable.filter(d => d.off);
-    const bhOff = days.filter(d => d.bh && d.off);
-    if (!off.length && !bhOff.length) continue;
-    let al, free = workable.length - off.length;
-    if (L.settings.mode === 'flex') al = Math.min(off.length, Math.max(0, L.settings.perWeek - free));
-    else al = off.reduce((a, d) => a + (L.settings.fixed[d.i] || 0), 0);
-    out.push({ monday: ymd(m), off, bhOff, free, al, anchor: (off[0] || bhOff[0]).k });
+    const worked = workable.filter(d => d.work);
+    const bhOff = days.filter(d => d.bh && d.inTrip);
+    if (!off.length && !bhOff.length && !worked.length) continue;
+    const free = workable.length - off.length;
+    const unpaidDays = off.filter(d => d.unpaid);
+    let total, up;
+    if (L.settings.mode === 'flex') {
+      total = Math.min(off.length, Math.max(0, L.settings.perWeek - free));
+      up = Math.min(total, unpaidDays.length);
+    } else {
+      total = off.reduce((a, d) => a + (L.settings.fixed[d.i] || 0), 0);
+      up = unpaidDays.reduce((a, d) => a + (L.settings.fixed[d.i] || 0), 0);
+    }
+    out.push({ monday: ymd(m), off, bhOff, worked, unpaidDays, free, total, up, al: total - up, anchor: (off[0] || bhOff[0] || worked[0]).k });
   }
   return out;
 }
-const tripCalc = t => tripWeeks(t.start, t.end).reduce((a, w) => a + w.al, 0);
-const tripDays = t => (t.override !== null && t.override !== undefined && t.override !== '') ? +t.override : tripCalc(t);
+const hasOverride = t => t.override !== null && t.override !== undefined && t.override !== '';
+const weeksOf = t => tripWeeks(t.start, t.end, t.days);
+const tripCalc = t => weeksOf(t).reduce((a, w) => a + w.al, 0);
+const tripUnpaid = t => weeksOf(t).reduce((a, w) => a + w.up, 0);
+const tripDays = t => hasOverride(t) ? +t.override : tripCalc(t);
 function tripDaysInYear(t, ly) {
-  if (t.override !== null && t.override !== undefined && t.override !== '') return leaveYearOf(t.start) === ly ? +t.override : 0;
-  return tripWeeks(t.start, t.end).filter(w => leaveYearOf(w.anchor) === ly).reduce((a, w) => a + w.al, 0);
+  if (hasOverride(t)) return leaveYearOf(t.start) === ly ? +t.override : 0;
+  return weeksOf(t).filter(w => leaveYearOf(w.anchor) === ly).reduce((a, w) => a + w.al, 0);
 }
+const tripUnpaidInYear = (t, ly) => weeksOf(t).filter(w => leaveYearOf(w.anchor) === ly).reduce((a, w) => a + w.up, 0);
+const carryFor = ly => +((L.carry || {})[ly]) || 0;
+const allowanceFor = ly => (+L.settings.allowance || 0) + carryFor(ly);
 function bhOnWorkingDays(ly) {
   if (L.settings.mode !== 'fixed') return 0;
   const a = yearStart(ly), b = yearEnd(ly);
   return [...BH].filter(k => k >= a && k <= b).reduce((sum, k) => { const dw = parseD(k).getDay(); return dw >= 1 && dw <= 5 ? sum + (L.settings.fixed[dw - 1] || 0) : sum; }, 0);
 }
 function yearSummary(ly) {
-  const allowance = +L.settings.allowance || 0;
+  const allowance = allowanceFor(ly);
   const bh = L.settings.bhFromAllowance ? bhOnWorkingDays(ly) : 0;
+  const unpaid = L.trips.reduce((a, t) => a + tripUnpaidInYear(t, ly), 0);
   const trips = L.trips.map(t => ({ t, days: tripDaysInYear(t, ly) })).filter(x => x.days > 0 || (x.t.start <= yearEnd(ly) && x.t.end >= yearStart(ly)));
   const used = trips.reduce((a, x) => a + x.days, 0);
-  return { allowance, bh, trips, used, left: allowance - bh - used };
+  return { allowance, bh, trips, used, unpaid, left: allowance - bh - used };
 }
 function basisText() {
   const s = L.settings;
-  if (s.mode === 'flex') return `Counting <strong>${num(s.perWeek)} days a week, on any days</strong>, with <strong>${num(s.allowance)} days</strong> a year.`;
+  if (s.mode === 'flex') return `Counting <strong>${num(s.perWeek)} days a week, on any days</strong>.`;
   const names = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri'].map((n, i) => s.fixed[i] === 1 ? n : s.fixed[i] === 0.5 ? n + ' (half)' : null).filter(Boolean);
-  return `Counting <strong>fixed days: ${names.join(', ') || 'none set'}</strong>, with <strong>${num(s.allowance)} days</strong> a year${s.bhFromAllowance ? ', bank holidays taken from the allowance' : ''}.`;
+  return `Counting <strong>fixed days: ${names.join(', ') || 'none set'}</strong>${s.bhFromAllowance ? ', bank holidays taken from the allowance' : ''}.`;
 }
 function weekLine(w) {
   const bh = w.bhOff.length ? `, plus bank holiday${w.bhOff.length > 1 ? 's' : ''} ${w.bhOff.map(d => fmt(d.k)).join(' and ')}` : '';
+  const wk = w.worked.length ? ` Working ${w.worked.map(d => fmt(d.k)).join(', ')}.` : '';
+  const upTxt = w.up ? ` ${num(w.up)} of those ${w.up === 1 ? 'is' : 'are'} unpaid.` : '';
+  const result = `<strong>${num(w.al)} AL${w.up ? `, ${num(w.up)} unpaid` : ''}</strong>`;
   if (L.settings.mode === 'flex') {
-    const why = w.free === 0 ? `No other weekdays free, so all ${num(Math.min(L.settings.perWeek, w.off.length))} of your days are leave.`
-      : w.al === 0 ? `${plural(w.free, 'other weekday')} still free to work your ${num(L.settings.perWeek)} days, so no leave needed.`
-      : `Only ${plural(w.free, 'other weekday')} free, so ${num(w.al)} of your days ${w.al === 1 ? 'is' : 'are'} leave.`;
-    return `<p><strong>Week of ${fmt(w.monday)}:</strong> ${plural(w.off.length, 'weekday')} off${bh}. ${why} <strong>${num(w.al)} AL</strong></p>`;
+    const why = w.free === 0 ? `No other weekdays free, so all ${num(w.total)} of your days are off.`
+      : w.total === 0 ? `${plural(w.free, 'weekday')} still free to work your ${num(L.settings.perWeek)} days, so nothing is taken.`
+      : `Only ${plural(w.free, 'weekday')} free to work, so ${num(w.total)} of your days ${w.total === 1 ? 'is' : 'are'} off.`;
+    return `<p><strong>Week of ${fmt(w.monday)}:</strong> ${plural(w.off.length, 'weekday')} off${bh}.${wk} ${why}${upTxt} ${result}</p>`;
   }
-  return `<p><strong>Week of ${fmt(w.monday)}:</strong> ${plural(w.off.length, 'weekday')} off${bh}, of which your working days add up to <strong>${num(w.al)} AL</strong></p>`;
+  return `<p><strong>Week of ${fmt(w.monday)}:</strong> ${plural(w.off.length, 'weekday')} off${bh}.${wk} Your working days among them add up to ${num(w.total)}.${upTxt} ${result}</p>`;
 }
 
 let openBreakdown = new Set();
@@ -842,30 +904,37 @@ function renderLeave() {
   $('#allow').innerHTML = `
     <div class="allow-top">
       <div class="big-left">${num(s.left)}<small>days left</small></div>
-      <div class="muted">${num(s.used)} of ${num(s.allowance - s.bh)} days booked or planned in ${yearLabel(ly)}</div>
+      <div class="muted">${num(s.used)} of ${num(s.allowance - s.bh)} days booked or planned in ${yearLabel(ly)}${s.unpaid ? `, plus ${num(s.unpaid)} unpaid` : ''}</div>
     </div>
     <div class="allow-bar" role="img" aria-label="${num(s.used)} days used of ${num(s.allowance)}">${segs}</div>
     <div class="allow-legend">${s.bh ? `<span><i class="bh-seg" style="background:repeating-linear-gradient(45deg,var(--line),var(--line) 3px,var(--sunk) 3px,var(--sunk) 6px)"></i>Bank holidays on your days ${num(s.bh)}</span>` : ''}${s.trips.map(x => `<span><i style="background:${x.t.color}"></i>${esc(x.t.name)} ${num(x.days)}</span>`).join('')}</div>
     ${s.left < 0 ? `<p class="over-msg">That is ${num(-s.left)} days over your allowance.</p>` : ''}
-    <div class="basis"><span>${basisText()}</span><button class="btn btn-sm" id="changeBasis">Change</button></div>`;
+    <div class="basis">
+      <span>Allowance this year: <strong>${num(L.settings.allowance)}</strong> standard +</span>
+      <label class="carry"><input type="number" id="carryIn" step="0.1" value="${carryFor(ly) || ''}" placeholder="0" aria-label="Days carried over into ${yearLabel(ly)}"> carried over</label>
+      <span>= <strong>${num(s.allowance)} days</strong></span>
+    </div>
+    <div class="basis" style="border-top:0;margin-top:0;padding-top:4px"><span>${basisText()}</span><button class="btn btn-sm" id="changeBasis">Change</button></div>`;
 
   // Trips (this leave year plus anything overlapping it)
   const a = yearStart(ly), b = yearEnd(ly);
   const trips = L.trips.filter(t => t.end >= a && t.start <= b).sort((x, y) => x.start.localeCompare(y.start));
   $('#tripList').innerHTML = trips.length ? trips.map(t => {
-    const days = tripDays(t), manual = t.override !== null && t.override !== undefined && t.override !== '';
-    const weeks = tripWeeks(t.start, t.end);
+    const days = tripDays(t), manual = hasOverride(t), unpaid = tripUnpaid(t);
+    const weeks = weeksOf(t);
+    const marks = Object.values(t.days || {});
+    const nWork = marks.filter(v => v === 'work').length;
     const open = openBreakdown.has(t.id);
     const past = t.end < todayS();
     return `<li class="trip" data-id="${t.id}" ${past ? 'style="opacity:.7"' : ''}>
       <div class="trip-row">
         <span class="trip-dot" style="background:${t.color}"></span>
-        <div><div class="trip-name">${esc(t.name)}</div><div class="trip-dates">${fmt(t.start, true)} to ${fmt(t.end, true)}</div></div>
-        <div class="trip-days">${num(days)} AL<small>${manual ? 'set by you' : 'calculated'}</small></div>
+        <div><div class="trip-name">${esc(t.name)}</div><div class="trip-dates">${fmt(t.start, true)} to ${fmt(t.end, true)}${nWork ? `, working ${plural(nWork, 'day')}` : ''}</div></div>
+        <div class="trip-days">${num(days)} AL<small>${unpaid ? `${num(unpaid)} unpaid, ` : ''}${manual ? 'set by you' : 'calculated'}</small></div>
       </div>
       <div class="trip-actions">
         <button class="btn btn-sm btn-quiet" data-act="why" aria-expanded="${open}">${open ? 'Hide working' : 'Show working'}</button>
-        <button class="btn btn-sm btn-quiet" data-act="edit">Edit</button>
+        <button class="btn btn-sm btn-quiet" data-act="edit">Edit dates and days</button>
       </div>
       ${open ? `<div class="breakdown">${weeks.length ? weeks.map(weekLine).join('') : '<p>No weekdays in this range.</p>'}${manual ? `<p>You set this trip to ${num(days)} days. The calculation gives ${num(tripCalc(t))}.</p>` : ''}</div>` : ''}
     </li>`;
@@ -874,6 +943,7 @@ function renderLeave() {
   // Calendar
   $('#calLegend').innerHTML = `<span><i style="box-shadow:inset 0 0 0 1.5px var(--ink-2)"></i>Bank holiday</span><span><i style="outline:2px solid var(--focus);outline-offset:-2px"></i>Today</span>` + trips.map(t => `<span><i style="background:${t.color}"></i>${esc(t.name)}</span>`).join('');
   const tripOn = k => L.trips.find(t => k >= t.start && k <= t.end);
+  $('#calLegend').innerHTML += `<span><i class="lg-work"></i>Working during a trip</span><span><i class="lg-unpaid"></i>Unpaid</span>`;
   const tdy = todayS();
   let months = '';
   for (let i = 0; i < 12; i++) {
@@ -884,8 +954,9 @@ function renderLeave() {
     const dim = new Date(y, m + 1, 0).getDate();
     for (let d = 1; d <= dim; d++) {
       const dt = new Date(y, m, d, 12), k = ymd(dt), dw = dt.getDay(), t = tripOn(k);
-      let cls = 'd'; if (dw === 0 || dw === 6) cls += ' we'; if (BH.has(k)) cls += ' bh'; if (t) cls += ' trip'; if (k === tdy) cls += ' today';
-      const title = [BH.has(k) ? 'Bank holiday' : '', t ? t.name : ''].filter(Boolean).join(', ');
+      const mk = t && t.days ? t.days[k] : null;
+      let cls = 'd'; if (dw === 0 || dw === 6) cls += ' we'; if (BH.has(k)) cls += ' bh'; if (t) cls += mk === 'work' ? ' trip-work' : ' trip'; if (mk === 'unpaid') cls += ' unpaid'; if (k === tdy) cls += ' today';
+      const title = [BH.has(k) ? 'Bank holiday' : '', t ? t.name : '', mk === 'work' ? 'working' : mk === 'unpaid' ? 'unpaid' : ''].filter(Boolean).join(', ');
       g += `<span class="${cls}"${t ? ` style="--c:${t.color}"` : ''}${title ? ` title="${esc(title)}"` : ''}>${d}</span>`;
     }
     months += `<div class="month"><h3>${MON_LONG[m]} ${y}</h3><div class="mgrid">${g}</div></div>`;
@@ -933,6 +1004,12 @@ $('#page-leave').addEventListener('click', e => {
   if (act.dataset.act === 'why') { openBreakdown.has(id) ? openBreakdown.delete(id) : openBreakdown.add(id); renderLeave(); }
   if (act.dataset.act === 'edit') openTrip(id);
 });
+$('#page-leave').addEventListener('change', e => {
+  if (e.target.id !== 'carryIn') return;
+  L.carry = L.carry || {}; const v = parseFloat(e.target.value);
+  if (v) L.carry[L.viewYear] = v; else delete L.carry[L.viewYear];
+  saveLeave();
+});
 $('#sAllow').addEventListener('change', e => { L.settings.allowance = parseFloat(e.target.value) || 0; saveLeave(); });
 $('#sPerWeek').addEventListener('change', e => { L.settings.perWeek = Math.min(5, Math.max(0.5, parseFloat(e.target.value) || 3)); saveLeave(); });
 $('#sStart').addEventListener('change', e => { L.settings.startMonth = +e.target.value; L.viewYear = currentLY(); saveLeave(); });
@@ -941,22 +1018,58 @@ $('#mFixed').addEventListener('change', () => { L.settings.mode = 'fixed'; saveL
 $('#sBhAllow').addEventListener('change', e => { L.settings.bhFromAllowance = e.target.checked; saveLeave(); });
 $('#sDays').addEventListener('change', e => { const i = e.target.dataset.day; if (i === undefined) return; L.settings.fixed[+i] = parseFloat(e.target.value); saveLeave(); });
 
-let editTripId = null, editColour = null;
+let editTripId = null, editColour = null, editMarks = {}, paint = 'off';
+function dlgDates() { return { start: $('#eStart').value, end: $('#eEnd').value }; }
+function renderDayGrid() {
+  const { start, end } = dlgDates();
+  if (!start || !end || end < start) { $('#eDays').innerHTML = '<p class="help">Set valid dates first.</p>'; $('#eLive').textContent = ''; return; }
+  const s = parseD(start), e = parseD(end);
+  let h = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'].map(x => `<span class="hd">${x}</span>`).join('');
+  for (let d = mondayOf(s); d <= e || d.getDay() !== 1; d = addDays(d, 1)) {
+    const k = ymd(d), dw = d.getDay(), inTrip = d >= s && d <= e;
+    const label = (d.getDate() === 1 || k === start ? MON[d.getMonth()] + ' ' : '') + d.getDate();
+    if (!inTrip) { h += `<span class="dc out">${label}</span>`; continue; }
+    if (dw === 0 || dw === 6) { h += `<span class="dc we">${label}</span>`; continue; }
+    if (BH.has(k)) { h += `<span class="dc bhc" title="Bank holiday">${label}</span>`; continue; }
+    const st = editMarks[k] || 'off';
+    h += `<button type="button" class="dc ${st}" data-k="${k}" aria-label="${fmt(k)}: ${st === 'off' ? 'leave' : st === 'work' ? 'working' : 'unpaid'}">${label}</button>`;
+  }
+  $('#eDays').innerHTML = h;
+  const tmp = { start, end, days: editMarks };
+  const al = tripCalc(tmp), up = tripUnpaid(tmp);
+  $('#eLive').textContent = `With these days: ${num(al)} AL${up ? ` and ${num(up)} unpaid` : ''}.`;
+}
+function setMark(k, v) { if (v === 'off') delete editMarks[k]; else editMarks[k] = v; }
 function openTrip(id) {
   const t = L.trips.find(x => x.id === id); if (!t) return;
-  editTripId = id; editColour = t.color;
+  editTripId = id; editColour = t.color; editMarks = Object.assign({}, t.days || {}); paint = 'off';
   $('#eName').value = t.name; $('#eStart').value = t.start; $('#eEnd').value = t.end;
-  $('#eOverride').value = (t.override !== null && t.override !== undefined) ? t.override : '';
+  $('#eOverride').value = hasOverride(t) ? t.override : '';
   $('#eSwatches').innerHTML = swatchHTML(editColour);
-  $('#eCalc').textContent = `Calculated from your working pattern: ${num(tripCalc(t))} days. Only fill in the box above if HR has booked a different number.`;
+  document.querySelectorAll('.paint-btn').forEach(b => b.setAttribute('aria-checked', b.dataset.paint === 'off'));
+  $('#rFrom').value = t.start; $('#rTo').value = t.end;
+  $('#eCalc').textContent = 'Only fill this in if HR has booked a different number. It replaces the calculation.';
+  renderDayGrid();
   $('#tripDlg').showModal();
 }
+$('#eStart').addEventListener('change', renderDayGrid);
+$('#eEnd').addEventListener('change', renderDayGrid);
+document.querySelectorAll('.paint-btn').forEach(b => b.addEventListener('click', () => { paint = b.dataset.paint; document.querySelectorAll('.paint-btn').forEach(x => x.setAttribute('aria-checked', x === b)); }));
+$('#eDays').addEventListener('click', e => { const b = e.target.closest('[data-k]'); if (!b) return; const k = b.dataset.k; setMark(k, (editMarks[k] || 'off') === paint ? 'off' : paint); renderDayGrid(); });
+$('#rApply').onclick = () => {
+  const { start, end } = dlgDates(); let a = $('#rFrom').value, b = $('#rTo').value;
+  if (!a || !b || b < a) { toast('Pick a valid stretch of dates.'); return; }
+  if (a < start) a = start; if (b > end) b = end;
+  for (let d = parseD(a); d <= parseD(b); d = addDays(d, 1)) { const k = ymd(d), dw = d.getDay(); if (dw > 0 && dw < 6 && !BH.has(k)) setMark(k, $('#rAs').value); }
+  renderDayGrid();
+};
 $('#eSwatches').addEventListener('click', e => { const b = e.target.closest('.swatch'); if (!b) return; editColour = b.dataset.c; $('#eSwatches').innerHTML = swatchHTML(editColour); });
 $('#tripForm').addEventListener('submit', e => {
   const t = L.trips.find(x => x.id === editTripId); if (!t) return;
   const name = $('#eName').value.trim(), start = $('#eStart').value, end = $('#eEnd').value, ov = $('#eOverride').value;
   if (!name || !start || !end || end < start) { e.preventDefault(); toast('Check the name and dates.'); return; }
-  Object.assign(t, { name, start, end, color: editColour, override: ov === '' ? null : parseFloat(ov) });
+  const days = {}; Object.keys(editMarks).forEach(k => { if (k >= start && k <= end) days[k] = editMarks[k]; });
+  Object.assign(t, { name, start, end, color: editColour, override: ov === '' ? null : parseFloat(ov), days });
   editTripId = null; saveLeave(); toast('Changes saved');
 });
 $('#eCancel').onclick = () => { $('#tripDlg').close(); editTripId = null; };
