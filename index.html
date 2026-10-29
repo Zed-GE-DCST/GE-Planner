@@ -1,0 +1,1052 @@
+<!DOCTYPE html>
+<html lang="en-GB">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Planner</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Atkinson+Hyperlegible+Next:wght@400;600;800&display=swap" rel="stylesheet">
+<style>
+:root {
+  color-scheme: light;
+  --paper: #ECEFEB;
+  --surface: #FFFFFF;
+  --sunk: #F4F6F3;
+  --ink: #1E2A2F;
+  --ink-2: #4B595E;
+  --ink-3: #7A878A;
+  --line: #D3DAD4;
+  --moss: #3D6B4B;
+  --moss-ink: #FFFFFF;
+  --moss-tint: #E0EBE1;
+  --lichen: #DCE58C;
+  --lichen-ink: #3A4210;
+  --rust: #B04E2A;
+  --rust-tint: #F6E3DA;
+  --amber: #8A5A00;
+  --heather: #7A5683;
+  --heather-tint: #EEE5F0;
+  --focus: #2F6FB3;
+  --font: 'Atkinson Hyperlegible Next', 'Atkinson Hyperlegible', 'Segoe UI', system-ui, sans-serif;
+}
+@media (prefers-color-scheme: dark) {
+  :root {
+    color-scheme: dark;
+    --paper: #151B1D;
+    --surface: #1E2629;
+    --sunk: #192124;
+    --ink: #E5ECE8;
+    --ink-2: #AFBBB7;
+    --ink-3: #7F8C88;
+    --line: #314043;
+    --moss: #8CC09A;
+    --moss-ink: #10201A;
+    --moss-tint: #233A2C;
+    --lichen: #4A5320;
+    --lichen-ink: #EEF3C2;
+    --rust: #E58C68;
+    --rust-tint: #3F2620;
+    --amber: #E3B35A;
+    --heather: #C9A3D2;
+    --heather-tint: #33283A;
+    --focus: #7FB2EC;
+  }
+}
+*, *::before, *::after { box-sizing: border-box; }
+html { font-size: 16px; }
+body { margin: 0; background: var(--paper); color: var(--ink); font-family: var(--font); line-height: 1.45; -webkit-font-smoothing: antialiased; }
+button, input, select, textarea { font: inherit; color: inherit; }
+button { cursor: pointer; }
+:focus-visible { outline: 3px solid var(--focus); outline-offset: 2px; border-radius: 6px; }
+@media (prefers-reduced-motion: reduce) { * { transition: none !important; animation: none !important; } }
+.sr { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
+
+/* Top bar */
+.bar { position: sticky; top: 0; z-index: 20; background: var(--paper); border-bottom: 1px solid var(--line); }
+.bar-inner { max-width: 1180px; margin: 0 auto; padding: 0 20px; display: flex; align-items: center; gap: 24px; height: 56px; }
+.brand { font-weight: 800; font-size: 1.05rem; letter-spacing: -0.01em; text-decoration: none; color: var(--ink); }
+.brand span { color: var(--moss); }
+.nav { display: flex; gap: 4px; }
+.nav a { text-decoration: none; color: var(--ink-2); font-weight: 600; padding: 7px 14px; border-radius: 999px; }
+.nav a:hover { background: var(--surface); color: var(--ink); }
+.nav a[aria-current="page"] { background: var(--ink); color: var(--paper); }
+.bar-date { margin-left: auto; color: var(--ink-2); font-size: 0.92rem; }
+
+main { max-width: 1180px; margin: 0 auto; padding: 28px 20px 64px; }
+.page { display: none; }
+.page.on { display: block; }
+h1, h2, h3 { margin: 0; letter-spacing: -0.015em; }
+h2 { font-size: 1.12rem; font-weight: 800; }
+h3 { font-size: 1rem; font-weight: 800; }
+.muted { color: var(--ink-2); }
+.small { font-size: 0.88rem; }
+
+/* Buttons and fields */
+.btn { border: 1px solid var(--line); background: var(--surface); padding: 8px 14px; border-radius: 8px; font-weight: 600; }
+.btn:hover { border-color: var(--ink-3); }
+.btn-primary { background: var(--moss); border-color: var(--moss); color: var(--moss-ink); }
+.btn-primary:hover { filter: brightness(1.08); border-color: var(--moss); }
+.btn-quiet { border-color: transparent; background: transparent; color: var(--ink-2); }
+.btn-quiet:hover { background: var(--surface); color: var(--ink); border-color: transparent; }
+.btn-danger { color: var(--rust); }
+.btn-sm { padding: 4px 10px; font-size: 0.86rem; border-radius: 7px; }
+.field { display: flex; flex-direction: column; gap: 4px; }
+.field > span { font-size: 0.86rem; font-weight: 600; color: var(--ink-2); }
+input[type=text], input[type=number], input[type=date], select, textarea {
+  background: var(--sunk); border: 1px solid var(--line); border-radius: 8px; padding: 8px 10px; min-width: 0;
+}
+input:focus, select:focus, textarea:focus { border-color: var(--moss); outline: none; box-shadow: 0 0 0 3px var(--moss-tint); }
+textarea { resize: vertical; }
+.check-row { display: flex; align-items: flex-start; gap: 8px; font-size: 0.95rem; }
+.check-row input { margin-top: 4px; accent-color: var(--moss); width: 16px; height: 16px; }
+
+/* ===== HOME ===== */
+.home-head { padding: 12px 0 28px; }
+.home-day { font-size: clamp(2.4rem, 6vw, 4.2rem); font-weight: 800; line-height: 0.98; letter-spacing: -0.035em; }
+.home-sub { margin-top: 10px; font-size: 1.05rem; color: var(--ink-2); }
+.home-grid { display: grid; grid-template-columns: 1.25fr 1fr; gap: 20px; }
+.tile { background: var(--surface); border: 1px solid var(--line); border-radius: 16px; padding: 22px 22px 18px; display: flex; flex-direction: column; gap: 14px; }
+.tile-head { display: flex; align-items: baseline; justify-content: space-between; gap: 12px; }
+.tile-head h2 { font-size: 1.4rem; }
+.tile-link { color: var(--moss); font-weight: 600; text-decoration: none; }
+.tile-link:hover { text-decoration: underline; }
+.now-list { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 8px; }
+.now-list li { background: var(--lichen); color: var(--lichen-ink); padding: 10px 14px; border-radius: 10px; font-weight: 600; }
+.home-facts { display: flex; flex-direction: column; gap: 6px; margin: 0; padding: 14px 0 0; border-top: 1px solid var(--line); }
+.home-facts div { display: flex; gap: 10px; }
+.home-facts dt { width: 120px; flex-shrink: 0; color: var(--ink-2); font-size: 0.92rem; }
+.home-facts dd { margin: 0; font-weight: 600; }
+.big-left { font-size: 2.6rem; font-weight: 800; letter-spacing: -0.03em; line-height: 1; }
+.big-left small { font-size: 1rem; font-weight: 600; color: var(--ink-2); letter-spacing: 0; margin-left: 6px; }
+.home-foot { margin-top: 28px; display: flex; gap: 10px; flex-wrap: wrap; align-items: center; }
+.empty-note { color: var(--ink-2); background: var(--sunk); border: 1px dashed var(--line); padding: 14px; border-radius: 10px; }
+
+/* ===== TASKS ===== */
+.dump { background: var(--surface); border: 1px solid var(--line); border-radius: 16px; padding: 16px; margin-bottom: 20px; }
+.dump textarea { width: 100%; min-height: 76px; background: var(--sunk); font-size: 1rem; }
+.dump-row { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; margin-top: 10px; }
+.dump-help { font-size: 0.86rem; color: var(--ink-2); flex: 1; min-width: 240px; }
+.dump-help code { background: var(--sunk); border: 1px solid var(--line); border-radius: 5px; padding: 0 5px; font-family: inherit; font-weight: 600; color: var(--ink); }
+.toolbar { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; margin-bottom: 16px; }
+.chip-btn { border: 1px solid var(--line); background: var(--surface); border-radius: 999px; padding: 4px 12px; font-size: 0.88rem; font-weight: 600; color: var(--ink-2); }
+.chip-btn[aria-pressed="true"] { background: var(--ink); color: var(--paper); border-color: var(--ink); }
+.toolbar .spacer { flex: 1; }
+.tasks-grid { display: grid; grid-template-columns: minmax(0, 1.55fr) minmax(290px, 1fr); gap: 20px; align-items: start; }
+.col { display: flex; flex-direction: column; gap: 20px; min-width: 0; }
+.lane { background: var(--surface); border: 1px solid var(--line); border-radius: 14px; padding: 14px 14px 10px; transition: border-color .15s, background .15s; }
+.lane.drop { border-color: var(--moss); background: var(--moss-tint); }
+.lane-head { display: flex; align-items: baseline; gap: 8px; margin-bottom: 8px; }
+.lane-head .count { color: var(--ink-3); font-weight: 600; font-size: 0.9rem; }
+.lane-head .hint { margin-left: auto; font-size: 0.82rem; color: var(--ink-3); }
+.lane-now { border: 2px solid var(--ink); }
+.lane-now .lane-head h2 { font-size: 1.35rem; }
+.lane-sort { border-style: dashed; border-color: var(--moss); }
+.items { list-style: none; margin: 0; padding: 0; }
+.item { display: flex; gap: 10px; align-items: flex-start; padding: 9px 4px; border-top: 1px solid var(--line); }
+.items .item:first-child { border-top: 0; }
+.item[draggable="true"] { cursor: grab; }
+.item.dragging { opacity: .4; }
+.check { width: 22px; height: 22px; flex-shrink: 0; margin-top: 1px; border: 2px solid var(--ink-3); border-radius: 6px; background: var(--surface); position: relative; padding: 0; }
+.check:hover { border-color: var(--moss); }
+.check[aria-pressed="true"] { background: var(--moss); border-color: var(--moss); }
+.check[aria-pressed="true"]::after { content: ''; position: absolute; left: 6px; top: 2px; width: 6px; height: 11px; border: solid var(--moss-ink); border-width: 0 2.5px 2.5px 0; transform: rotate(45deg); }
+.item-body { flex: 1; min-width: 0; text-align: left; background: none; border: 0; padding: 0; display: flex; flex-direction: column; gap: 3px; }
+.item-title { font-weight: 600; }
+.item.is-done .item-title { text-decoration: line-through; color: var(--ink-3); }
+.lane-now .item-title { font-size: 1.06rem; }
+.item-note { font-size: 0.88rem; color: var(--ink-2); }
+.item-meta { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 2px; }
+.tag { --h: 140; background: hsl(var(--h) 32% 90%); color: hsl(var(--h) 45% 25%); border-radius: 999px; padding: 1px 9px; font-size: 0.8rem; font-weight: 600; }
+@media (prefers-color-scheme: dark) { .tag { background: hsl(var(--h) 22% 24%); color: hsl(var(--h) 50% 82%); } }
+.due { font-size: 0.82rem; font-weight: 600; color: var(--ink-2); }
+.due.soon { color: var(--amber); }
+.due.over { color: var(--rust); }
+.due.hard { background: var(--rust-tint); color: var(--rust); padding: 1px 8px; border-radius: 999px; }
+.who { font-size: 0.82rem; font-weight: 600; color: var(--heather); }
+.flag { font-size: 0.8rem; font-weight: 600; padding: 1px 8px; border-radius: 999px; border: 1px solid var(--line); color: var(--ink-2); }
+.flag-drain { border-color: var(--heather); color: var(--heather); }
+.soft { font-size: 0.82rem; color: var(--amber); font-weight: 600; }
+.triage { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 6px; }
+.lane-empty { color: var(--ink-3); font-size: 0.92rem; padding: 6px 4px 8px; }
+.cap-warn { font-size: 0.86rem; color: var(--amber); padding: 0 4px 6px; }
+.dl-list { list-style: none; margin: 0; padding: 0; }
+.dl-list li { display: grid; grid-template-columns: 92px 1fr; gap: 10px; padding: 8px 2px; border-top: 1px solid var(--line); font-size: 0.94rem; }
+.dl-list li:first-child { border-top: 0; }
+.dl-when { font-weight: 800; }
+.dl-when small { display: block; font-weight: 600; font-size: 0.78rem; color: var(--ink-3); }
+.dl-when.over { color: var(--rust); }
+.dl-list button { background: none; border: 0; padding: 0; text-align: left; font-weight: 600; }
+.done-wrap summary { cursor: pointer; font-weight: 800; padding: 4px 0; }
+.done-wrap { background: transparent; border: 1px dashed var(--line); border-radius: 14px; padding: 10px 14px; }
+
+/* ===== LEAVE ===== */
+.leave-head { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; margin-bottom: 18px; }
+.leave-head h1 { font-size: 1.7rem; font-weight: 800; }
+.year-switch { display: flex; align-items: center; gap: 4px; margin-left: auto; background: var(--surface); border: 1px solid var(--line); border-radius: 999px; padding: 3px; }
+.year-switch button { border: 0; background: none; width: 34px; height: 32px; border-radius: 999px; font-size: 1.1rem; }
+.year-switch button:hover { background: var(--sunk); }
+.year-switch span { font-weight: 600; padding: 0 6px; min-width: 150px; text-align: center; }
+.allow { background: var(--surface); border: 1px solid var(--line); border-radius: 16px; padding: 20px 22px; margin-bottom: 20px; }
+.allow-top { display: flex; align-items: flex-end; gap: 16px; flex-wrap: wrap; margin-bottom: 14px; }
+.allow-top .muted { margin-bottom: 4px; }
+.allow-bar { display: flex; height: 26px; border-radius: 8px; overflow: hidden; background: var(--sunk); border: 1px solid var(--line); }
+.allow-bar > span { height: 100%; border-right: 2px solid var(--surface); min-width: 3px; }
+.allow-bar > span:last-child { border-right: 0; }
+.allow-bar .bh-seg { background: repeating-linear-gradient(45deg, var(--line), var(--line) 4px, var(--sunk) 4px, var(--sunk) 8px); }
+.allow-legend { display: flex; flex-wrap: wrap; gap: 6px 18px; margin-top: 10px; font-size: 0.9rem; color: var(--ink-2); }
+.allow-legend i { display: inline-block; width: 11px; height: 11px; border-radius: 3px; margin-right: 6px; vertical-align: -1px; }
+.over-msg { margin-top: 10px; color: var(--rust); font-weight: 600; }
+.basis { margin-top: 14px; padding-top: 12px; border-top: 1px solid var(--line); font-size: 0.92rem; color: var(--ink-2); display: flex; gap: 10px; flex-wrap: wrap; align-items: center; }
+.basis strong { color: var(--ink); }
+.leave-grid { display: grid; grid-template-columns: minmax(0, 1.5fr) minmax(280px, 1fr); gap: 20px; align-items: start; margin-bottom: 20px; }
+.panel { background: var(--surface); border: 1px solid var(--line); border-radius: 14px; padding: 16px 18px; }
+.panel h2 { margin-bottom: 10px; }
+.trips { list-style: none; margin: 0; padding: 0; }
+.trip { border-top: 1px solid var(--line); padding: 12px 0; }
+.trip:first-child { border-top: 0; padding-top: 2px; }
+.trip-row { display: grid; grid-template-columns: 14px minmax(0,1fr) auto; gap: 12px; align-items: center; }
+.trip-dot { width: 14px; height: 14px; border-radius: 4px; }
+.trip-name { font-weight: 800; }
+.trip-dates { font-size: 0.9rem; color: var(--ink-2); }
+.trip-days { font-weight: 800; font-size: 1.1rem; text-align: right; white-space: nowrap; }
+.trip-days small { display: block; font-size: 0.78rem; font-weight: 600; color: var(--ink-3); }
+.trip-actions { display: flex; gap: 4px; margin: 6px 0 0 26px; flex-wrap: wrap; }
+.breakdown { margin: 8px 0 0 26px; padding: 10px 12px; background: var(--sunk); border-radius: 8px; font-size: 0.88rem; color: var(--ink-2); }
+.breakdown p { margin: 0 0 4px; }
+.breakdown p:last-child { margin: 0; }
+.breakdown strong { color: var(--ink); }
+.add-form { display: grid; gap: 10px; }
+.add-form .two { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+.swatches { display: flex; gap: 8px; flex-wrap: wrap; }
+.swatch { width: 28px; height: 28px; border-radius: 8px; border: 2px solid transparent; padding: 0; }
+.swatch[aria-checked="true"] { border-color: var(--ink); box-shadow: inset 0 0 0 2px var(--surface); }
+.preview-days { font-size: 0.92rem; color: var(--ink-2); min-height: 1.4em; }
+.cal { background: var(--surface); border: 1px solid var(--line); border-radius: 14px; padding: 16px 18px; }
+.cal-legend { display: flex; flex-wrap: wrap; gap: 6px 16px; font-size: 0.86rem; color: var(--ink-2); margin: 6px 0 14px; }
+.cal-legend i { display: inline-block; width: 14px; height: 14px; border-radius: 4px; margin-right: 6px; vertical-align: -2px; }
+.months { display: grid; grid-template-columns: repeat(auto-fill, minmax(196px, 1fr)); gap: 18px 22px; }
+.month h3 { font-size: 0.95rem; margin-bottom: 6px; }
+.mgrid { display: grid; grid-template-columns: repeat(7, 1fr); gap: 2px; }
+.mgrid .hd { font-size: 0.72rem; color: var(--ink-3); text-align: center; font-weight: 600; }
+.d { font-size: 0.78rem; text-align: center; padding: 3px 0; border-radius: 4px; position: relative; }
+.d.we { color: var(--ink-3); }
+.d.bh { box-shadow: inset 0 0 0 1.5px var(--ink-2); font-weight: 800; }
+.d.trip { background: color-mix(in srgb, var(--c) 45%, var(--surface)); color: var(--ink); font-weight: 600; }
+.d.trip.we { background: color-mix(in srgb, var(--c) 18%, var(--surface)); }
+.d.today { outline: 2px solid var(--focus); outline-offset: -1px; font-weight: 800; }
+.pattern { margin-top: 20px; }
+.pattern summary { cursor: pointer; font-weight: 800; font-size: 1.05rem; }
+.pattern-body { display: grid; gap: 14px; margin-top: 14px; max-width: 640px; }
+.pattern-body .two { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+.radio-card { border: 1px solid var(--line); border-radius: 10px; padding: 12px; display: grid; gap: 8px; }
+.radio-card label.head { display: flex; gap: 8px; font-weight: 600; align-items: center; }
+.radio-card input[type=radio] { accent-color: var(--moss); width: 16px; height: 16px; }
+.days5 { display: grid; grid-template-columns: repeat(5, 1fr); gap: 6px; }
+.days5 label { display: flex; flex-direction: column; gap: 3px; font-size: 0.82rem; font-weight: 600; color: var(--ink-2); }
+.help { font-size: 0.86rem; color: var(--ink-2); margin: 0; }
+
+/* Dialog and toast */
+dialog { border: 1px solid var(--line); border-radius: 16px; padding: 22px; width: min(520px, calc(100vw - 32px)); background: var(--surface); color: var(--ink); }
+dialog::backdrop { background: rgba(20, 28, 30, .45); }
+dialog h2 { margin-bottom: 14px; font-size: 1.25rem; }
+.form-grid { display: grid; gap: 12px; }
+.form-grid .two { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+.dialog-actions { display: flex; gap: 8px; margin-top: 18px; align-items: center; }
+.dialog-actions .spacer { flex: 1; }
+.toast { position: fixed; left: 50%; bottom: 22px; transform: translate(-50%, 16px); opacity: 0; background: var(--ink); color: var(--paper); padding: 10px 12px 10px 16px; border-radius: 10px; display: flex; gap: 12px; align-items: center; font-weight: 600; transition: opacity .2s, transform .2s; pointer-events: none; z-index: 60; }
+.toast.on { opacity: 1; transform: translate(-50%, 0); pointer-events: auto; }
+.toast button { background: none; border: 1px solid var(--paper); color: var(--paper); border-radius: 7px; padding: 3px 10px; font-weight: 600; }
+
+@media (max-width: 860px) {
+  .home-grid, .tasks-grid, .leave-grid { grid-template-columns: 1fr; }
+  .bar-date { display: none; }
+  .bar-inner { gap: 12px; }
+  main { padding-top: 20px; }
+}
+@media (max-width: 520px) {
+  .nav a { padding: 6px 10px; }
+  .form-grid .two, .add-form .two, .pattern-body .two { grid-template-columns: 1fr; }
+  .year-switch { margin-left: 0; }
+}
+</style>
+</head>
+<body>
+
+<header class="bar">
+  <div class="bar-inner">
+    <a class="brand" href="#home">Planner<span>.</span></a>
+    <nav class="nav" aria-label="Sections">
+      <a href="#home" data-nav="home">Home</a>
+      <a href="#tasks" data-nav="tasks">Tasks</a>
+      <a href="#leave" data-nav="leave">Leave</a>
+    </nav>
+    <span class="bar-date" id="barDate"></span>
+  </div>
+</header>
+
+<main>
+  <!-- HOME -->
+  <section class="page" id="page-home" aria-labelledby="homeDay">
+    <div class="home-head">
+      <h1 class="home-day" id="homeDay"></h1>
+      <p class="home-sub" id="homeSub"></p>
+    </div>
+    <div class="home-grid">
+      <article class="tile">
+        <div class="tile-head"><h2>Now</h2><a class="tile-link" href="#tasks">Open tasks</a></div>
+        <div id="homeNow"></div>
+        <dl class="home-facts" id="homeTaskFacts"></dl>
+      </article>
+      <article class="tile">
+        <div class="tile-head"><h2>Leave</h2><a class="tile-link" href="#leave">Open leave planner</a></div>
+        <div id="homeLeave"></div>
+      </article>
+    </div>
+    <div class="home-foot">
+      <button class="btn btn-sm" id="exportBtn">Download a backup</button>
+      <button class="btn btn-sm" id="importBtn">Restore from a backup</button>
+      <input type="file" id="importFile" accept="application/json,.json" class="sr">
+      <span class="small muted">Your data lives in this browser only. Download a backup before clearing your browser or moving the site.</span>
+    </div>
+  </section>
+
+  <!-- TASKS -->
+  <section class="page" id="page-tasks" aria-label="Tasks">
+    <div class="dump">
+      <label for="dumpInput" class="sr">Add tasks</label>
+      <textarea id="dumpInput" placeholder="Dump everything here, one task per line. Paste a list from a Claude chat and it splits it for you."></textarea>
+      <div class="dump-row">
+        <p class="dump-help">Optional on each line: <code>#project</code> to tag it, <code>@George</code> if you are waiting on someone, <code>26/10</code> for a date, <code>!</code> if the date is a hard deadline.</p>
+        <label class="small muted" for="dumpLane">Put in</label>
+        <select id="dumpLane">
+          <option value="inbox">To sort</option>
+          <option value="now">Now</option>
+          <option value="week">This week</option>
+          <option value="later">Later</option>
+        </select>
+        <button class="btn btn-primary" id="dumpAdd">Add tasks</button>
+      </div>
+    </div>
+
+    <div class="toolbar" id="toolbar"></div>
+
+    <div class="tasks-grid">
+      <div class="col">
+        <section class="lane lane-sort" data-lane="inbox" id="lane-inbox" hidden></section>
+        <section class="lane lane-now" data-lane="now" id="lane-now"></section>
+        <section class="lane" data-lane="week" id="lane-week"></section>
+        <section class="lane" data-lane="later" id="lane-later"></section>
+        <details class="done-wrap" id="doneWrap"></details>
+      </div>
+      <div class="col">
+        <section class="lane" id="lane-deadlines" aria-label="Deadlines"></section>
+        <section class="lane" data-lane="waiting" id="lane-waiting"></section>
+        <section class="lane" data-lane="ongoing" id="lane-ongoing"></section>
+      </div>
+    </div>
+  </section>
+
+  <!-- LEAVE -->
+  <section class="page" id="page-leave" aria-label="Leave">
+    <div class="leave-head">
+      <h1>Leave</h1>
+      <div class="year-switch">
+        <button id="yPrev" aria-label="Previous leave year">&#8249;</button>
+        <span id="yLabel"></span>
+        <button id="yNext" aria-label="Next leave year">&#8250;</button>
+      </div>
+    </div>
+
+    <div class="allow" id="allow"></div>
+
+    <div class="leave-grid">
+      <section class="panel">
+        <h2>Trips and time off</h2>
+        <ul class="trips" id="tripList"></ul>
+      </section>
+      <section class="panel">
+        <h2>Add time off</h2>
+        <div class="add-form">
+          <label class="field"><span>Name</span><input type="text" id="tName" placeholder="Christmas break"></label>
+          <div class="two">
+            <label class="field"><span>First day off</span><input type="date" id="tStart"></label>
+            <label class="field"><span>Last day off</span><input type="date" id="tEnd"></label>
+          </div>
+          <div class="field"><span>Colour</span><div class="swatches" id="tSwatches" role="radiogroup" aria-label="Colour"></div></div>
+          <p class="preview-days" id="tPreview" aria-live="polite"></p>
+          <div><button class="btn btn-primary" id="tAdd">Add time off</button></div>
+        </div>
+      </section>
+    </div>
+
+    <section class="cal">
+      <h2>The year at a glance</h2>
+      <div class="cal-legend" id="calLegend"></div>
+      <div class="months" id="months"></div>
+    </section>
+
+    <details class="panel pattern" id="patternBox">
+      <summary>Working pattern and allowance</summary>
+      <div class="pattern-body">
+        <div class="two">
+          <label class="field"><span>Annual leave allowance (days)</span><input type="number" id="sAllow" step="0.1" min="0"></label>
+          <label class="field"><span>Leave year starts in</span><select id="sStart"></select></label>
+        </div>
+        <div class="radio-card">
+          <label class="head"><input type="radio" name="mode" value="flex" id="mFlex"> A set number of days a week, on any days</label>
+          <label class="field"><span>Days a week</span><input type="number" id="sPerWeek" step="0.5" min="0.5" max="5" style="max-width:120px"></label>
+          <p class="help">Each week you are away, the planner checks how many weekdays you still have free. If they cannot fit your days, the difference is annual leave. Bank holidays are not workable days.</p>
+        </div>
+        <div class="radio-card">
+          <label class="head"><input type="radio" name="mode" value="fixed" id="mFixed"> Fixed days each week</label>
+          <div class="days5" id="sDays"></div>
+          <label class="check-row"><input type="checkbox" id="sBhAllow"> <span>Bank holidays on my working days come out of my allowance</span></label>
+          <p class="help">Some part-time contracts include bank holidays in the allowance. Check your contract or the staff handbook before ticking this.</p>
+        </div>
+      </div>
+    </details>
+  </section>
+</main>
+
+<!-- Task dialog -->
+<dialog id="taskDlg" aria-labelledby="taskDlgTitle">
+  <form method="dialog" id="taskForm">
+    <h2 id="taskDlgTitle">Edit task</h2>
+    <div class="form-grid">
+      <label class="field"><span>Task</span><input type="text" id="fTitle" required></label>
+      <label class="field"><span>Note</span><textarea id="fNote" rows="2"></textarea></label>
+      <div class="two">
+        <label class="field"><span>Project</span><input type="text" id="fTag" list="tagList" placeholder="e.g. CoE"></label>
+        <label class="field"><span>List</span>
+          <select id="fLane">
+            <option value="inbox">To sort</option><option value="now">Now</option><option value="week">This week</option>
+            <option value="later">Later</option><option value="waiting">Waiting on</option><option value="ongoing">Ongoing</option><option value="done">Done</option>
+          </select>
+        </label>
+      </div>
+      <div class="two">
+        <label class="field"><span>Date</span><input type="date" id="fDue"></label>
+        <label class="field"><span>Waiting on</span><input type="text" id="fWho" placeholder="Name"></label>
+      </div>
+      <label class="check-row"><input type="checkbox" id="fHard"> <span>The date is a hard deadline</span></label>
+      <label class="check-row"><input type="checkbox" id="fQuick"> <span>Quick win, under an hour</span></label>
+      <label class="check-row"><input type="checkbox" id="fDrain"> <span>Draining (coordination, report writing, line management)</span></label>
+    </div>
+    <div class="dialog-actions">
+      <button type="button" class="btn btn-quiet btn-danger" id="fDelete">Delete task</button>
+      <span class="spacer"></span>
+      <button type="button" class="btn" id="fCancel">Cancel</button>
+      <button type="submit" class="btn btn-primary">Save task</button>
+    </div>
+  </form>
+</dialog>
+<datalist id="tagList"></datalist>
+
+<!-- Trip dialog -->
+<dialog id="tripDlg" aria-labelledby="tripDlgTitle">
+  <form method="dialog" id="tripForm">
+    <h2 id="tripDlgTitle">Edit time off</h2>
+    <div class="form-grid">
+      <label class="field"><span>Name</span><input type="text" id="eName" required></label>
+      <div class="two">
+        <label class="field"><span>First day off</span><input type="date" id="eStart" required></label>
+        <label class="field"><span>Last day off</span><input type="date" id="eEnd" required></label>
+      </div>
+      <div class="field"><span>Colour</span><div class="swatches" id="eSwatches" role="radiogroup" aria-label="Colour"></div></div>
+      <label class="field"><span>Leave days used (leave blank to calculate)</span><input type="number" id="eOverride" step="0.5" min="0" placeholder=""></label>
+      <p class="help" id="eCalc"></p>
+    </div>
+    <div class="dialog-actions">
+      <button type="button" class="btn btn-quiet btn-danger" id="eDelete">Delete</button>
+      <span class="spacer"></span>
+      <button type="button" class="btn" id="eCancel">Cancel</button>
+      <button type="submit" class="btn btn-primary">Save changes</button>
+    </div>
+  </form>
+</dialog>
+
+<div class="toast" id="toast" role="status" aria-live="polite"><span id="toastMsg"></span><button id="toastBtn" hidden></button></div>
+
+<script>
+/* ---------- Helpers ---------- */
+const $ = (s, el = document) => el.querySelector(s);
+const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+const pad = n => String(n).padStart(2, '0');
+const ymd = d => `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
+const parseD = s => { const [y, m, d] = s.split('-').map(Number); return new Date(y, m - 1, d, 12); };
+const addDays = (d, n) => { const x = new Date(d); x.setDate(x.getDate() + n); return x; };
+const todayD = () => { const n = new Date(); return new Date(n.getFullYear(), n.getMonth(), n.getDate(), 12); };
+const todayS = () => ymd(todayD());
+const diffDays = (a, b) => Math.round((parseD(b) - parseD(a)) / 86400000);
+const mondayOf = d => addDays(d, -((d.getDay() + 6) % 7));
+const weekKey = d => ymd(mondayOf(d));
+const DOW = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+const DOW_LONG = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
+const MON = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+const MON_LONG = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'];
+const fmt = (s, withYear) => { const d = parseD(s); return `${DOW[d.getDay()]} ${d.getDate()} ${MON[d.getMonth()]}${withYear || d.getFullYear() !== todayD().getFullYear() ? ' ' + d.getFullYear() : ''}`; };
+const num = n => (Math.round(n * 10) / 10).toString();
+const plural = (n, w) => `${num(n)} ${w}${n === 1 ? '' : 's'}`;
+const uid = () => Math.random().toString(36).slice(2, 8) + Date.now().toString(36).slice(-5);
+function load(key, fallback) { try { const r = localStorage.getItem(key); return r ? JSON.parse(r) : fallback; } catch (e) { return fallback; } }
+function store(key, v) { try { localStorage.setItem(key, JSON.stringify(v)); } catch (e) { toast('Could not save. This browser is blocking storage.'); } }
+
+let toastTimer;
+function toast(msg, actionLabel, action) {
+  const t = $('#toast'), b = $('#toastBtn');
+  $('#toastMsg').textContent = msg;
+  if (actionLabel) { b.hidden = false; b.textContent = actionLabel; b.onclick = () => { action(); t.classList.remove('on'); }; } else { b.hidden = true; }
+  t.classList.add('on'); clearTimeout(toastTimer); toastTimer = setTimeout(() => t.classList.remove('on'), actionLabel ? 5000 : 2200);
+}
+
+/* ---------- Tasks ---------- */
+const TKEY = 'planner.tasks.v1';
+let T = load(TKEY, { items: [] });
+if (!Array.isArray(T.items)) T.items = [];
+let tagFilter = null;
+const LANE_NAMES = { inbox: 'To sort', now: 'Now', week: 'This week', later: 'Later', waiting: 'Waiting on', ongoing: 'Ongoing', done: 'Done' };
+const saveTasks = () => { store(TKEY, T); renderAll(); };
+const findTask = id => T.items.find(t => t.id === id);
+const hue = s => { let h = 0; for (const c of s.toLowerCase()) h = (h * 31 + c.charCodeAt(0)) % 360; return h; };
+
+function parseLine(raw, lane) {
+  let s = raw.replace(/\*\*/g, '').replace(/^\s*(?:[-*\u2022\u2013]|\d+[.)])\s+/, '').trim();
+  if (!s) return null;
+  const t = { id: uid(), title: '', note: '', tag: '', lane, due: null, hard: false, quick: false, drain: false, who: '', since: null, created: todayS() };
+  s = s.replace(/(^|\s)#([\w&'-]+)/, (m, p, tag) => { t.tag = tag.replace(/-/g, ' '); return p; });
+  s = s.replace(/(^|\s)@([\w'-]+)/, (m, p, who) => { t.who = who; t.lane = 'waiting'; t.since = todayS(); return p; });
+  s = s.replace(/(^|\s)(\d{1,2})\/(\d{1,2})(?:\/(\d{2}|\d{4}))?(?=[\s,.]|$)/, (m, p, d, mo, y) => {
+    d = +d; mo = +mo;
+    let year = y ? (y.length === 2 ? 2000 + +y : +y) : todayD().getFullYear();
+    let dt = new Date(year, mo - 1, d, 12);
+    if (dt.getMonth() !== mo - 1 || dt.getDate() !== d) return m;
+    if (!y && diffDays(ymd(dt), todayS()) > 60) dt = new Date(year + 1, mo - 1, d, 12);
+    t.due = ymd(dt); return p;
+  });
+  s = s.replace(/(^|\s)!(?=\s|$)/, (m, p) => { t.hard = true; return p; });
+  t.title = s.replace(/\s{2,}/g, ' ').replace(/[\s,.:;-]+$/, '').trim();
+  return t.title ? t : null;
+}
+
+function addFromDump() {
+  const lane = $('#dumpLane').value;
+  const lines = $('#dumpInput').value.split(/\r?\n/);
+  const added = lines.map(l => parseLine(l, lane)).filter(Boolean);
+  if (!added.length) { toast('Type at least one task first.'); return; }
+  T.items.push(...added);
+  $('#dumpInput').value = '';
+  saveTasks();
+  toast(`Added ${plural(added.length, 'task')}`);
+}
+
+function dueChip(t) {
+  const n = diffDays(todayS(), t.due);
+  let text, cls = 'due';
+  if (n < 0) { text = t.hard ? `Deadline passed ${plural(-n, 'day')} ago` : `Aimed for ${plural(-n, 'day')} ago`; cls += ' over'; }
+  else if (n === 0) { text = t.hard ? 'Deadline today' : 'Aim for today'; cls += ' soon'; }
+  else if (n === 1) { text = t.hard ? 'Deadline tomorrow' : 'Aim for tomorrow'; cls += ' soon'; }
+  else { text = `${t.hard ? 'Deadline' : 'Aim for'} ${fmt(t.due)}`; if (n <= 6) cls += ' soon'; }
+  if (t.hard) cls += ' hard';
+  return `<span class="${cls}">${esc(text)}</span>`;
+}
+const waitText = since => { const n = diffDays(since, todayS()); return n <= 0 ? 'since today' : `for ${plural(n, 'day')}`; };
+const thisWeek = () => weekKey(todayD());
+
+function itemHTML(t, opts = {}) {
+  const ongoing = t.lane === 'ongoing';
+  const done = t.lane === 'done' || (ongoing && t.weekDone === thisWeek());
+  const meta = [];
+  if (t.tag) meta.push(`<span class="tag" style="--h:${hue(t.tag)}">${esc(t.tag)}</span>`);
+  if (t.due && t.lane !== 'done') meta.push(dueChip(t));
+  if (t.lane === 'waiting') meta.push(`<span class="who">${t.who ? esc(t.who) : 'Add who'}${t.since ? ', ' + waitText(t.since) : ''}</span>`);
+  if (ongoing && !done) meta.push('<span class="soft">Not touched this week</span>');
+  if (ongoing && done) meta.push('<span class="due">Done this week</span>');
+  if (t.quick) meta.push('<span class="flag">Quick win</span>');
+  if (t.drain) meta.push('<span class="flag flag-drain">Draining</span>');
+  const checkLabel = ongoing ? (done ? 'Mark not done this week' : 'Mark done this week') : (t.lane === 'done' ? 'Move back' : 'Mark done');
+  const triage = opts.triage ? `<div class="triage">${['now', 'week', 'later', 'waiting', 'ongoing'].map(l => `<button class="btn btn-sm" data-act="move" data-lane="${l}">${LANE_NAMES[l]}</button>`).join('')}</div>` : '';
+  return `<li class="item${done ? ' is-done' : ''}" draggable="true" data-id="${t.id}">
+    <button class="check" data-act="check" aria-pressed="${done}" aria-label="${checkLabel}: ${esc(t.title)}"></button>
+    <div style="flex:1;min-width:0">
+      <button class="item-body" data-act="edit"><span class="item-title">${esc(t.title)}</span>${t.note ? `<span class="item-note">${esc(t.note)}</span>` : ''}${meta.length ? `<span class="item-meta">${meta.join('')}</span>` : ''}</button>
+      ${triage}
+    </div>
+  </li>`;
+}
+
+function sortLane(list) {
+  return list.map((t, i) => ({ t, i })).sort((a, b) => {
+    const ad = a.t.due || '9999', bd = b.t.due || '9999';
+    if (ad !== bd) return ad < bd ? -1 : 1;
+    return a.i - b.i;
+  }).map(x => x.t);
+}
+
+const LANE_INFO = {
+  inbox: { empty: '', hint: 'Pick where each one goes' },
+  now: { empty: 'Nothing in Now. Pull one to three things up from This week.', hint: 'Keep to three' },
+  week: { empty: 'Nothing planned for this week yet.', hint: '' },
+  later: { empty: 'Nothing parked. Things for when there is space go here.', hint: 'When there is space' },
+  waiting: { empty: 'Not waiting on anyone.', hint: 'Chase when it goes stale' },
+  ongoing: { empty: 'No recurring work. Add weekly things like a pipeline check here.', hint: 'Ticks reset each Monday' }
+};
+
+function renderLane(lane, items) {
+  const el = $('#lane-' + lane);
+  const list = lane === 'now' || lane === 'ongoing' ? items : sortLane(items);
+  const info = LANE_INFO[lane];
+  let html = `<div class="lane-head"><h2>${LANE_NAMES[lane]}</h2><span class="count">${list.length}</span>${info.hint ? `<span class="hint">${info.hint}</span>` : ''}</div>`;
+  if (lane === 'now' && list.length > 3) html += `<p class="cap-warn">${list.length} things in Now. Move some down so the top three stay clear.</p>`;
+  html += list.length ? `<ul class="items">${list.map(t => itemHTML(t, { triage: lane === 'inbox' })).join('')}</ul>` : `<p class="lane-empty">${info.empty}</p>`;
+  el.innerHTML = html;
+  if (lane === 'inbox') el.hidden = !list.length;
+}
+
+function renderTasks() {
+  const tags = [...new Set(T.items.filter(t => t.lane !== 'done' && t.tag).map(t => t.tag))].sort((a, b) => a.localeCompare(b));
+  if (tagFilter && !tags.includes(tagFilter)) tagFilter = null;
+  $('#tagList').innerHTML = tags.map(t => `<option value="${esc(t)}">`).join('');
+  $('#toolbar').innerHTML = (tags.length ? `<button class="chip-btn" data-tag="" aria-pressed="${!tagFilter}">All projects</button>` + tags.map(t => `<button class="chip-btn" data-tag="${esc(t)}" aria-pressed="${tagFilter === t}">${esc(t)}</button>`).join('') : '') +
+    `<span class="spacer"></span><button class="btn btn-sm" id="copyBtn">Copy list for Claude</button>`;
+  const vis = T.items.filter(t => !tagFilter || t.tag === tagFilter);
+  ['inbox', 'now', 'week', 'later', 'waiting', 'ongoing'].forEach(l => renderLane(l, vis.filter(t => t.lane === l)));
+
+  // Deadlines
+  const dl = vis.filter(t => t.due && t.lane !== 'done').sort((a, b) => a.due.localeCompare(b.due)).slice(0, 10);
+  $('#lane-deadlines').innerHTML = `<div class="lane-head"><h2>Coming up</h2><span class="count">${dl.length}</span><span class="hint">Dates across all lists</span></div>` +
+    (dl.length ? `<ul class="dl-list">${dl.map(t => {
+      const n = diffDays(todayS(), t.due);
+      const when = n < 0 ? 'Overdue' : n === 0 ? 'Today' : n === 1 ? 'Tomorrow' : fmt(t.due);
+      const sub = n < 0 ? plural(-n, 'day') : n > 1 ? `in ${plural(n, 'day')}` : '';
+      return `<li data-id="${t.id}"><span class="dl-when${n < 0 ? ' over' : ''}">${when}${sub ? `<small>${sub}</small>` : ''}</span><span><button data-act="edit">${esc(t.title)}</button>${t.hard ? ' <span class="due hard">Hard</span>' : ''} <span class="small muted">${LANE_NAMES[t.lane]}</span></span></li>`;
+    }).join('')}</ul>` : '<p class="lane-empty">No dates set. Add a date like 26/10 to any task.</p>');
+
+  // Done
+  const done = vis.filter(t => t.lane === 'done').sort((a, b) => (b.doneAt || '').localeCompare(a.doneAt || ''));
+  const wasOpen = $('#doneWrap').open;
+  $('#doneWrap').innerHTML = `<summary>Done (${done.length})</summary>` + (done.length ? `<ul class="items">${done.slice(0, 40).map(t => itemHTML(t)).join('')}</ul><p><button class="btn btn-sm btn-quiet btn-danger" id="clearDone">Clear done tasks</button></p>` : '<p class="lane-empty">Ticked tasks land here.</p>');
+  $('#doneWrap').open = wasOpen;
+}
+
+function completeTask(t) {
+  if (t.lane === 'ongoing') { t.weekDone = t.weekDone === thisWeek() ? null : thisWeek(); saveTasks(); return; }
+  if (t.lane === 'done') { t.lane = t.prevLane || 'week'; t.doneAt = null; saveTasks(); return; }
+  t.prevLane = t.lane; t.lane = 'done'; t.doneAt = todayS();
+  saveTasks();
+  toast('Done', 'Undo', () => { t.lane = t.prevLane; t.doneAt = null; saveTasks(); });
+}
+
+function moveTask(t, lane) {
+  if (t.lane === lane) return;
+  if (lane === 'waiting' && !t.since) t.since = todayS();
+  if (lane !== 'waiting') t.since = null;
+  if (lane === 'done') { t.prevLane = t.lane; t.doneAt = todayS(); }
+  t.lane = lane;
+  saveTasks();
+  if (lane === 'waiting' && !t.who) openTask(t.id, 'fWho');
+}
+
+let editingId = null;
+function openTask(id, focusId) {
+  const t = findTask(id); if (!t) return;
+  editingId = id;
+  $('#fTitle').value = t.title; $('#fNote').value = t.note || ''; $('#fTag').value = t.tag || '';
+  $('#fLane').value = t.lane; $('#fDue').value = t.due || ''; $('#fWho').value = t.who || '';
+  $('#fHard').checked = !!t.hard; $('#fQuick').checked = !!t.quick; $('#fDrain').checked = !!t.drain;
+  $('#taskDlg').showModal();
+  if (focusId) $('#' + focusId).focus();
+}
+$('#taskForm').addEventListener('submit', e => {
+  const t = findTask(editingId); if (!t) return;
+  const title = $('#fTitle').value.trim(); if (!title) { e.preventDefault(); return; }
+  const newLane = $('#fLane').value;
+  Object.assign(t, { title, note: $('#fNote').value.trim(), tag: $('#fTag').value.trim(), due: $('#fDue').value || null, who: $('#fWho').value.trim(), hard: $('#fHard').checked, quick: $('#fQuick').checked, drain: $('#fDrain').checked });
+  if (newLane !== t.lane) moveTaskQuiet(t, newLane);
+  editingId = null; saveTasks(); toast('Task saved');
+});
+function moveTaskQuiet(t, lane) {
+  if (lane === 'waiting' && !t.since) t.since = todayS();
+  if (lane !== 'waiting') t.since = null;
+  if (lane === 'done') { t.prevLane = t.lane; t.doneAt = todayS(); }
+  if (t.lane === 'done' && lane !== 'done') t.doneAt = null;
+  t.lane = lane;
+}
+$('#fCancel').onclick = () => { $('#taskDlg').close(); editingId = null; };
+$('#fDelete').onclick = () => {
+  const t = findTask(editingId); if (!t) return;
+  const idx = T.items.indexOf(t); T.items.splice(idx, 1); $('#taskDlg').close(); editingId = null; saveTasks();
+  toast('Task deleted', 'Undo', () => { T.items.splice(idx, 0, t); saveTasks(); });
+};
+
+function copyForClaude() {
+  const by = l => sortLane(T.items.filter(t => t.lane === l));
+  const line = t => {
+    const bits = [t.title];
+    if (t.tag) bits.push(`(${t.tag})`);
+    if (t.due) bits.push(`[${t.hard ? 'deadline' : 'aim'} ${fmt(t.due, true)}]`);
+    if (t.lane === 'waiting') bits.push(`waiting on ${t.who || 'someone'}${t.since ? ' since ' + fmt(t.since) : ''}`);
+    if (t.lane === 'ongoing') bits.push(t.weekDone === thisWeek() ? '(done this week)' : '(not touched this week)');
+    if (t.quick) bits.push('(quick win)');
+    if (t.drain) bits.push('(draining)');
+    if (t.note) bits.push(`: ${t.note}`);
+    return '- ' + bits.join(' ');
+  };
+  const d = todayD();
+  let out = `**Action list, ${DOW_LONG[d.getDay()]} ${d.getDate()} ${MON_LONG[d.getMonth()]} ${d.getFullYear()}**\n`;
+  [['now', 'Now'], ['week', 'This week'], ['waiting', 'Waiting on others'], ['ongoing', 'Ongoing'], ['later', 'Later, when there is space'], ['inbox', 'Not sorted yet']].forEach(([l, h]) => {
+    const items = by(l); if (items.length) out += `\n**${h}**\n${items.map(line).join('\n')}\n`;
+  });
+  const recent = T.items.filter(t => t.lane === 'done' && t.doneAt && diffDays(t.doneAt, todayS()) <= 7);
+  if (recent.length) out += `\n**Done in the last week**\n${recent.map(t => '- ' + t.title).join('\n')}\n`;
+  const fallback = () => { const ta = document.createElement('textarea'); ta.value = out; document.body.appendChild(ta); ta.select(); try { document.execCommand('copy'); toast('List copied. Paste it into Claude.'); } catch (e) { toast('Copy failed. Select the text manually.'); } ta.remove(); };
+  if (navigator.clipboard && window.isSecureContext) navigator.clipboard.writeText(out).then(() => toast('List copied. Paste it into Claude.'), fallback); else fallback();
+}
+
+/* Task events */
+$('#dumpAdd').onclick = addFromDump;
+$('#dumpInput').addEventListener('keydown', e => { if (e.key === 'Enter' && (e.ctrlKey || e.metaKey)) addFromDump(); });
+$('#page-tasks').addEventListener('click', e => {
+  const chip = e.target.closest('[data-tag]');
+  if (chip) { tagFilter = chip.dataset.tag || null; renderTasks(); return; }
+  if (e.target.id === 'copyBtn') { copyForClaude(); return; }
+  if (e.target.id === 'clearDone') {
+    if (!confirm('Clear all done tasks? This cannot be undone.')) return;
+    T.items = T.items.filter(t => t.lane !== 'done'); saveTasks(); return;
+  }
+  const act = e.target.closest('[data-act]'); if (!act) return;
+  const holder = act.closest('[data-id]'); if (!holder) return;
+  const t = findTask(holder.dataset.id); if (!t) return;
+  if (act.dataset.act === 'check') completeTask(t);
+  else if (act.dataset.act === 'edit') openTask(t.id);
+  else if (act.dataset.act === 'move') moveTask(t, act.dataset.lane);
+});
+let dragId = null;
+$('#page-tasks').addEventListener('dragstart', e => { const li = e.target.closest('.item'); if (!li) return; dragId = li.dataset.id; li.classList.add('dragging'); e.dataTransfer.effectAllowed = 'move'; e.dataTransfer.setData('text/plain', dragId); });
+$('#page-tasks').addEventListener('dragend', e => { const li = e.target.closest('.item'); if (li) li.classList.remove('dragging'); dragId = null; document.querySelectorAll('.lane.drop').forEach(l => l.classList.remove('drop')); });
+document.querySelectorAll('[data-lane].lane').forEach(lane => {
+  lane.addEventListener('dragover', e => { if (!dragId) return; e.preventDefault(); lane.classList.add('drop'); });
+  lane.addEventListener('dragleave', e => { if (!lane.contains(e.relatedTarget)) lane.classList.remove('drop'); });
+  lane.addEventListener('drop', e => {
+    e.preventDefault(); lane.classList.remove('drop');
+    const t = findTask(dragId); if (!t) return;
+    const target = lane.dataset.lane;
+    if (t.lane === target && target === 'now') {
+      // reorder within Now: drop onto an item to place before it
+      const over = e.target.closest('.item');
+      if (over && over.dataset.id !== t.id) { const from = T.items.indexOf(t); T.items.splice(from, 1); const to = T.items.indexOf(findTask(over.dataset.id)); T.items.splice(to, 0, t); saveTasks(); }
+      return;
+    }
+    moveTask(t, target);
+  });
+});
+
+/* ---------- Leave ---------- */
+const LKEY = 'planner.leave.v1';
+const LDEFAULT = { settings: { allowance: 16.8, startMonth: 4, mode: 'flex', perWeek: 3, fixed: [1, 1, 1, 0, 0], bhFromAllowance: false }, trips: [], viewYear: null };
+let L = load(LKEY, null) || JSON.parse(JSON.stringify(LDEFAULT));
+L.settings = Object.assign({}, LDEFAULT.settings, L.settings || {});
+if (!Array.isArray(L.trips)) L.trips = [];
+const saveLeave = () => { store(LKEY, L); renderAll(); };
+
+// England and Wales bank holidays. Refreshed from gov.uk when online; this list is the offline fallback.
+const BH_FALLBACK = ['2025-01-01','2025-04-18','2025-04-21','2025-05-05','2025-05-26','2025-08-25','2025-12-25','2025-12-26',
+  '2026-01-01','2026-04-03','2026-04-06','2026-05-04','2026-05-25','2026-08-31','2026-12-25','2026-12-28',
+  '2027-01-01','2027-03-26','2027-03-29','2027-05-03','2027-05-31','2027-08-30','2027-12-27','2027-12-28',
+  '2028-01-03'];
+const cachedBH = load('planner.bh', null);
+let BH = new Set([...BH_FALLBACK, ...((cachedBH && cachedBH.dates) || [])]);
+function refreshBH() {
+  if (cachedBH && cachedBH.fetched && diffDays(cachedBH.fetched, todayS()) < 30) return;
+  fetch('https://www.gov.uk/bank-holidays.json').then(r => r.ok ? r.json() : null).then(d => {
+    const dates = d && d['england-and-wales'] && d['england-and-wales'].events.map(e => e.date);
+    if (!dates || !dates.length) return;
+    store('planner.bh', { fetched: todayS(), dates });
+    BH = new Set([...BH_FALLBACK, ...dates]); renderAll();
+  }).catch(() => {});
+}
+
+const SWATCHES = ['#3D6B4B', '#7DA05A', '#C9A227', '#C8693F', '#B0476A', '#7A5683', '#3E6E8E', '#5C6B70'];
+const leaveYearOf = s => { const d = parseD(s); return d.getMonth() + 1 >= L.settings.startMonth ? d.getFullYear() : d.getFullYear() - 1; };
+const yearStart = ly => ymd(new Date(ly, L.settings.startMonth - 1, 1, 12));
+const yearEnd = ly => ymd(addDays(new Date(ly + 1, L.settings.startMonth - 1, 1, 12), -1));
+const yearLabel = ly => L.settings.startMonth === 1 ? String(ly) : `${MON[L.settings.startMonth - 1]} ${ly} to ${MON[(L.settings.startMonth + 10) % 12]} ${ly + 1}`;
+const currentLY = () => leaveYearOf(todayS());
+if (!L.viewYear) L.viewYear = currentLY();
+
+// Core count. Works week by week (Mon to Fri). Bank holidays are never workable days.
+function tripWeeks(start, end) {
+  const s = parseD(start), e = parseD(end), out = [];
+  for (let m = mondayOf(s); m <= e; m = addDays(m, 7)) {
+    const days = [];
+    for (let i = 0; i < 5; i++) { const d = addDays(m, i), k = ymd(d); days.push({ k, i, bh: BH.has(k), off: d >= s && d <= e }); }
+    const workable = days.filter(d => !d.bh);
+    const off = workable.filter(d => d.off);
+    const bhOff = days.filter(d => d.bh && d.off);
+    if (!off.length && !bhOff.length) continue;
+    let al, free = workable.length - off.length;
+    if (L.settings.mode === 'flex') al = Math.min(off.length, Math.max(0, L.settings.perWeek - free));
+    else al = off.reduce((a, d) => a + (L.settings.fixed[d.i] || 0), 0);
+    out.push({ monday: ymd(m), off, bhOff, free, al, anchor: (off[0] || bhOff[0]).k });
+  }
+  return out;
+}
+const tripCalc = t => tripWeeks(t.start, t.end).reduce((a, w) => a + w.al, 0);
+const tripDays = t => (t.override !== null && t.override !== undefined && t.override !== '') ? +t.override : tripCalc(t);
+function tripDaysInYear(t, ly) {
+  if (t.override !== null && t.override !== undefined && t.override !== '') return leaveYearOf(t.start) === ly ? +t.override : 0;
+  return tripWeeks(t.start, t.end).filter(w => leaveYearOf(w.anchor) === ly).reduce((a, w) => a + w.al, 0);
+}
+function bhOnWorkingDays(ly) {
+  if (L.settings.mode !== 'fixed') return 0;
+  const a = yearStart(ly), b = yearEnd(ly);
+  return [...BH].filter(k => k >= a && k <= b).reduce((sum, k) => { const dw = parseD(k).getDay(); return dw >= 1 && dw <= 5 ? sum + (L.settings.fixed[dw - 1] || 0) : sum; }, 0);
+}
+function yearSummary(ly) {
+  const allowance = +L.settings.allowance || 0;
+  const bh = L.settings.bhFromAllowance ? bhOnWorkingDays(ly) : 0;
+  const trips = L.trips.map(t => ({ t, days: tripDaysInYear(t, ly) })).filter(x => x.days > 0 || (x.t.start <= yearEnd(ly) && x.t.end >= yearStart(ly)));
+  const used = trips.reduce((a, x) => a + x.days, 0);
+  return { allowance, bh, trips, used, left: allowance - bh - used };
+}
+function basisText() {
+  const s = L.settings;
+  if (s.mode === 'flex') return `Counting <strong>${num(s.perWeek)} days a week, on any days</strong>, with <strong>${num(s.allowance)} days</strong> a year.`;
+  const names = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri'].map((n, i) => s.fixed[i] === 1 ? n : s.fixed[i] === 0.5 ? n + ' (half)' : null).filter(Boolean);
+  return `Counting <strong>fixed days: ${names.join(', ') || 'none set'}</strong>, with <strong>${num(s.allowance)} days</strong> a year${s.bhFromAllowance ? ', bank holidays taken from the allowance' : ''}.`;
+}
+function weekLine(w) {
+  const bh = w.bhOff.length ? `, plus bank holiday${w.bhOff.length > 1 ? 's' : ''} ${w.bhOff.map(d => fmt(d.k)).join(' and ')}` : '';
+  if (L.settings.mode === 'flex') {
+    const why = w.free === 0 ? `No other weekdays free, so all ${num(Math.min(L.settings.perWeek, w.off.length))} of your days are leave.`
+      : w.al === 0 ? `${plural(w.free, 'other weekday')} still free to work your ${num(L.settings.perWeek)} days, so no leave needed.`
+      : `Only ${plural(w.free, 'other weekday')} free, so ${num(w.al)} of your days ${w.al === 1 ? 'is' : 'are'} leave.`;
+    return `<p><strong>Week of ${fmt(w.monday)}:</strong> ${plural(w.off.length, 'weekday')} off${bh}. ${why} <strong>${num(w.al)} AL</strong></p>`;
+  }
+  return `<p><strong>Week of ${fmt(w.monday)}:</strong> ${plural(w.off.length, 'weekday')} off${bh}, of which your working days add up to <strong>${num(w.al)} AL</strong></p>`;
+}
+
+let openBreakdown = new Set();
+let addColour = SWATCHES[0];
+function swatchHTML(selected) { return SWATCHES.map(c => `<button type="button" class="swatch" role="radio" aria-checked="${c === selected}" aria-label="Colour ${c}" data-c="${c}" style="background:${c}"></button>`).join(''); }
+
+function renderLeave() {
+  const ly = L.viewYear;
+  $('#yLabel').textContent = yearLabel(ly);
+  const s = yearSummary(ly);
+  const total = Math.max(s.allowance, s.used + s.bh) || 1;
+  const segs = (s.bh ? `<span class="bh-seg" style="width:${s.bh / total * 100}%" title="Bank holidays on your days: ${num(s.bh)}"></span>` : '') +
+    s.trips.filter(x => x.days > 0).map(x => `<span style="width:${x.days / total * 100}%;background:${x.t.color}" title="${esc(x.t.name)}: ${num(x.days)} days"></span>`).join('');
+  $('#allow').innerHTML = `
+    <div class="allow-top">
+      <div class="big-left">${num(s.left)}<small>days left</small></div>
+      <div class="muted">${num(s.used)} of ${num(s.allowance - s.bh)} days booked or planned in ${yearLabel(ly)}</div>
+    </div>
+    <div class="allow-bar" role="img" aria-label="${num(s.used)} days used of ${num(s.allowance)}">${segs}</div>
+    <div class="allow-legend">${s.bh ? `<span><i class="bh-seg" style="background:repeating-linear-gradient(45deg,var(--line),var(--line) 3px,var(--sunk) 3px,var(--sunk) 6px)"></i>Bank holidays on your days ${num(s.bh)}</span>` : ''}${s.trips.map(x => `<span><i style="background:${x.t.color}"></i>${esc(x.t.name)} ${num(x.days)}</span>`).join('')}</div>
+    ${s.left < 0 ? `<p class="over-msg">That is ${num(-s.left)} days over your allowance.</p>` : ''}
+    <div class="basis"><span>${basisText()}</span><button class="btn btn-sm" id="changeBasis">Change</button></div>`;
+
+  // Trips (this leave year plus anything overlapping it)
+  const a = yearStart(ly), b = yearEnd(ly);
+  const trips = L.trips.filter(t => t.end >= a && t.start <= b).sort((x, y) => x.start.localeCompare(y.start));
+  $('#tripList').innerHTML = trips.length ? trips.map(t => {
+    const days = tripDays(t), manual = t.override !== null && t.override !== undefined && t.override !== '';
+    const weeks = tripWeeks(t.start, t.end);
+    const open = openBreakdown.has(t.id);
+    const past = t.end < todayS();
+    return `<li class="trip" data-id="${t.id}" ${past ? 'style="opacity:.7"' : ''}>
+      <div class="trip-row">
+        <span class="trip-dot" style="background:${t.color}"></span>
+        <div><div class="trip-name">${esc(t.name)}</div><div class="trip-dates">${fmt(t.start, true)} to ${fmt(t.end, true)}</div></div>
+        <div class="trip-days">${num(days)} AL<small>${manual ? 'set by you' : 'calculated'}</small></div>
+      </div>
+      <div class="trip-actions">
+        <button class="btn btn-sm btn-quiet" data-act="why" aria-expanded="${open}">${open ? 'Hide working' : 'Show working'}</button>
+        <button class="btn btn-sm btn-quiet" data-act="edit">Edit</button>
+      </div>
+      ${open ? `<div class="breakdown">${weeks.length ? weeks.map(weekLine).join('') : '<p>No weekdays in this range.</p>'}${manual ? `<p>You set this trip to ${num(days)} days. The calculation gives ${num(tripCalc(t))}.</p>` : ''}</div>` : ''}
+    </li>`;
+  }).join('') : `<li class="empty-note">No time off in ${yearLabel(ly)} yet. Add some on the right.</li>`;
+
+  // Calendar
+  $('#calLegend').innerHTML = `<span><i style="box-shadow:inset 0 0 0 1.5px var(--ink-2)"></i>Bank holiday</span><span><i style="outline:2px solid var(--focus);outline-offset:-2px"></i>Today</span>` + trips.map(t => `<span><i style="background:${t.color}"></i>${esc(t.name)}</span>`).join('');
+  const tripOn = k => L.trips.find(t => k >= t.start && k <= t.end);
+  const tdy = todayS();
+  let months = '';
+  for (let i = 0; i < 12; i++) {
+    const first = new Date(ly, L.settings.startMonth - 1 + i, 1, 12);
+    const y = first.getFullYear(), m = first.getMonth();
+    let g = ['M', 'T', 'W', 'T', 'F', 'S', 'S'].map(h => `<span class="hd">${h}</span>`).join('');
+    const lead = (first.getDay() + 6) % 7; for (let j = 0; j < lead; j++) g += '<span></span>';
+    const dim = new Date(y, m + 1, 0).getDate();
+    for (let d = 1; d <= dim; d++) {
+      const dt = new Date(y, m, d, 12), k = ymd(dt), dw = dt.getDay(), t = tripOn(k);
+      let cls = 'd'; if (dw === 0 || dw === 6) cls += ' we'; if (BH.has(k)) cls += ' bh'; if (t) cls += ' trip'; if (k === tdy) cls += ' today';
+      const title = [BH.has(k) ? 'Bank holiday' : '', t ? t.name : ''].filter(Boolean).join(', ');
+      g += `<span class="${cls}"${t ? ` style="--c:${t.color}"` : ''}${title ? ` title="${esc(title)}"` : ''}>${d}</span>`;
+    }
+    months += `<div class="month"><h3>${MON_LONG[m]} ${y}</h3><div class="mgrid">${g}</div></div>`;
+  }
+  $('#months').innerHTML = months;
+
+  // Settings form values
+  $('#sAllow').value = L.settings.allowance; $('#sPerWeek').value = L.settings.perWeek;
+  $('#sStart').value = L.settings.startMonth;
+  $('#mFlex').checked = L.settings.mode === 'flex'; $('#mFixed').checked = L.settings.mode === 'fixed';
+  $('#sBhAllow').checked = !!L.settings.bhFromAllowance;
+  $('#sDays').innerHTML = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri'].map((n, i) => `<label>${n}<select data-day="${i}"><option value="1"${L.settings.fixed[i] === 1 ? ' selected' : ''}>Full</option><option value="0.5"${L.settings.fixed[i] === 0.5 ? ' selected' : ''}>Half</option><option value="0"${!L.settings.fixed[i] ? ' selected' : ''}>Off</option></select></label>`).join('');
+  $('#tSwatches').innerHTML = swatchHTML(addColour);
+  previewAdd();
+}
+
+function previewAdd() {
+  const s = $('#tStart').value, e = $('#tEnd').value;
+  $('#tPreview').textContent = s && e && e >= s ? `This uses ${num(tripCalc({ start: s, end: e }))} days of annual leave.` : (s && e ? 'The last day must be on or after the first day.' : '');
+}
+
+/* Leave events */
+$('#sStart').innerHTML = MON_LONG.map((m, i) => `<option value="${i + 1}">${m}</option>`).join('');
+$('#yPrev').onclick = () => { L.viewYear--; saveLeave(); };
+$('#yNext').onclick = () => { L.viewYear++; saveLeave(); };
+$('#tStart').addEventListener('change', () => { if (!$('#tEnd').value || $('#tEnd').value < $('#tStart').value) $('#tEnd').value = $('#tStart').value; previewAdd(); });
+$('#tEnd').addEventListener('change', previewAdd);
+$('#tSwatches').addEventListener('click', e => { const b = e.target.closest('.swatch'); if (!b) return; addColour = b.dataset.c; $('#tSwatches').innerHTML = swatchHTML(addColour); });
+$('#tAdd').onclick = () => {
+  const name = $('#tName').value.trim(), start = $('#tStart').value, end = $('#tEnd').value;
+  if (!name) { toast('Give it a name first.'); $('#tName').focus(); return; }
+  if (!start || !end) { toast('Add the first and last day off.'); return; }
+  if (end < start) { toast('The last day must be on or after the first day.'); return; }
+  const t = { id: uid(), name, start, end, color: addColour, override: null };
+  L.trips.push(t); L.viewYear = leaveYearOf(start);
+  $('#tName').value = ''; $('#tStart').value = ''; $('#tEnd').value = '';
+  addColour = SWATCHES[(SWATCHES.indexOf(addColour) + 1) % SWATCHES.length];
+  saveLeave(); toast(`Added ${name}, ${num(tripDays(t))} AL days`);
+};
+$('#page-leave').addEventListener('click', e => {
+  if (e.target.id === 'changeBasis') { $('#patternBox').open = true; $('#patternBox').scrollIntoView({ behavior: 'smooth', block: 'start' }); return; }
+  const act = e.target.closest('[data-act]'); if (!act) return;
+  const li = act.closest('[data-id]'); if (!li) return;
+  const id = li.dataset.id;
+  if (act.dataset.act === 'why') { openBreakdown.has(id) ? openBreakdown.delete(id) : openBreakdown.add(id); renderLeave(); }
+  if (act.dataset.act === 'edit') openTrip(id);
+});
+$('#sAllow').addEventListener('change', e => { L.settings.allowance = parseFloat(e.target.value) || 0; saveLeave(); });
+$('#sPerWeek').addEventListener('change', e => { L.settings.perWeek = Math.min(5, Math.max(0.5, parseFloat(e.target.value) || 3)); saveLeave(); });
+$('#sStart').addEventListener('change', e => { L.settings.startMonth = +e.target.value; L.viewYear = currentLY(); saveLeave(); });
+$('#mFlex').addEventListener('change', () => { L.settings.mode = 'flex'; saveLeave(); });
+$('#mFixed').addEventListener('change', () => { L.settings.mode = 'fixed'; saveLeave(); });
+$('#sBhAllow').addEventListener('change', e => { L.settings.bhFromAllowance = e.target.checked; saveLeave(); });
+$('#sDays').addEventListener('change', e => { const i = e.target.dataset.day; if (i === undefined) return; L.settings.fixed[+i] = parseFloat(e.target.value); saveLeave(); });
+
+let editTripId = null, editColour = null;
+function openTrip(id) {
+  const t = L.trips.find(x => x.id === id); if (!t) return;
+  editTripId = id; editColour = t.color;
+  $('#eName').value = t.name; $('#eStart').value = t.start; $('#eEnd').value = t.end;
+  $('#eOverride').value = (t.override !== null && t.override !== undefined) ? t.override : '';
+  $('#eSwatches').innerHTML = swatchHTML(editColour);
+  $('#eCalc').textContent = `Calculated from your working pattern: ${num(tripCalc(t))} days. Only fill in the box above if HR has booked a different number.`;
+  $('#tripDlg').showModal();
+}
+$('#eSwatches').addEventListener('click', e => { const b = e.target.closest('.swatch'); if (!b) return; editColour = b.dataset.c; $('#eSwatches').innerHTML = swatchHTML(editColour); });
+$('#tripForm').addEventListener('submit', e => {
+  const t = L.trips.find(x => x.id === editTripId); if (!t) return;
+  const name = $('#eName').value.trim(), start = $('#eStart').value, end = $('#eEnd').value, ov = $('#eOverride').value;
+  if (!name || !start || !end || end < start) { e.preventDefault(); toast('Check the name and dates.'); return; }
+  Object.assign(t, { name, start, end, color: editColour, override: ov === '' ? null : parseFloat(ov) });
+  editTripId = null; saveLeave(); toast('Changes saved');
+});
+$('#eCancel').onclick = () => { $('#tripDlg').close(); editTripId = null; };
+$('#eDelete').onclick = () => {
+  const i = L.trips.findIndex(x => x.id === editTripId); if (i < 0) return;
+  const [t] = L.trips.splice(i, 1); $('#tripDlg').close(); editTripId = null; saveLeave();
+  toast(`Deleted ${t.name}`, 'Undo', () => { L.trips.splice(i, 0, t); saveLeave(); });
+};
+
+/* ---------- Home ---------- */
+function renderHome() {
+  const d = todayD();
+  $('#homeDay').textContent = `${DOW_LONG[d.getDay()]} ${d.getDate()} ${MON_LONG[d.getMonth()]}`;
+  const now = T.items.filter(t => t.lane === 'now');
+  const dueSoon = T.items.filter(t => t.due && t.lane !== 'done').sort((a, b) => a.due.localeCompare(b.due));
+  const overdue = dueSoon.filter(t => t.due < todayS()).length;
+  const waiting = T.items.filter(t => t.lane === 'waiting');
+  const sorting = T.items.filter(t => t.lane === 'inbox').length;
+  const stale = T.items.filter(t => t.lane === 'ongoing' && t.weekDone !== thisWeek()).length;
+  const bits = [];
+  if (overdue) bits.push(`${plural(overdue, 'thing')} past ${overdue === 1 ? 'its' : 'their'} date`);
+  if (sorting) bits.push(`${sorting} to sort`);
+  $('#homeSub').textContent = bits.length ? bits.join(', ') + '.' : `${d.getFullYear()}, week of ${fmt(ymd(mondayOf(d)))}.`;
+  $('#homeNow').innerHTML = now.length ? `<ul class="now-list">${now.slice(0, 3).map(t => `<li>${esc(t.title)}</li>`).join('')}</ul>${now.length > 3 ? `<p class="small muted" style="margin:8px 0 0">and ${now.length - 3} more</p>` : ''}`
+    : `<p class="empty-note">Nothing in Now. Open tasks and pick up to three things for today.</p>`;
+  const next = dueSoon.find(t => t.due >= todayS());
+  const facts = [];
+  if (next) facts.push(['Next date', `${esc(next.title)}, ${next.due === todayS() ? 'today' : fmt(next.due)}`]);
+  facts.push(['Waiting on', waiting.length ? esc([...new Set(waiting.map(t => t.who || 'someone'))].join(', ')) : 'Nobody']);
+  if (T.items.some(t => t.lane === 'ongoing')) facts.push(['Ongoing', stale ? `${stale} not touched this week` : 'All touched this week']);
+  $('#homeTaskFacts').innerHTML = facts.map(([k, v]) => `<div><dt>${k}</dt><dd>${v}</dd></div>`).join('');
+
+  const ly = currentLY(), s = yearSummary(ly);
+  const total = Math.max(s.allowance, s.used + s.bh) || 1;
+  const nextTrip = L.trips.filter(t => t.end >= todayS()).sort((a, b) => a.start.localeCompare(b.start))[0];
+  let nextTxt = 'Nothing booked yet';
+  if (nextTrip) { const n = diffDays(todayS(), nextTrip.start); nextTxt = `${esc(nextTrip.name)}, ${n <= 0 ? 'happening now' : n === 1 ? 'tomorrow' : `in ${n} days`}`; }
+  $('#homeLeave').innerHTML = `<div class="big-left">${num(s.left)}<small>days left</small></div>
+    <div class="allow-bar" style="height:14px">${(s.bh ? `<span class="bh-seg" style="width:${s.bh / total * 100}%"></span>` : '') + s.trips.filter(x => x.days > 0).map(x => `<span style="width:${x.days / total * 100}%;background:${x.t.color}"></span>`).join('')}</div>
+    <dl class="home-facts"><div><dt>Leave year</dt><dd>${yearLabel(ly)}</dd></div><div><dt>Next time off</dt><dd>${nextTxt}</dd></div><div><dt>Planned</dt><dd>${num(s.used)} of ${num(s.allowance - s.bh)} days</dd></div></dl>`;
+}
+
+/* ---------- Backup ---------- */
+$('#exportBtn').onclick = () => {
+  const blob = new Blob([JSON.stringify({ app: 'planner', version: 1, exported: new Date().toISOString(), tasks: T, leave: L }, null, 2)], { type: 'application/json' });
+  const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = `planner-backup-${todayS()}.json`;
+  document.body.appendChild(a); a.click(); a.remove(); setTimeout(() => URL.revokeObjectURL(a.href), 1000);
+  toast('Backup downloaded');
+};
+$('#importBtn').onclick = () => $('#importFile').click();
+$('#importFile').addEventListener('change', e => {
+  const f = e.target.files[0]; if (!f) return;
+  const r = new FileReader();
+  r.onload = () => {
+    try {
+      const d = JSON.parse(r.result);
+      const parts = [d.tasks && 'tasks', d.leave && 'leave'].filter(Boolean);
+      if (!parts.length) throw new Error('empty');
+      if (!confirm(`Replace your current ${parts.join(' and ')} with this backup?`)) return;
+      if (d.tasks && Array.isArray(d.tasks.items)) { T = d.tasks; store(TKEY, T); }
+      if (d.leave && Array.isArray(d.leave.trips)) {
+        L = d.leave; L.settings = Object.assign({}, LDEFAULT.settings, L.settings || {});
+        L.trips.forEach(t => { if (!t.id) t.id = uid(); if (t.override === undefined) t.override = null; });
+        if (!L.viewYear) L.viewYear = currentLY(); store(LKEY, L);
+      }
+      renderAll(); toast('Backup restored');
+    } catch (err) { toast('That file is not a planner backup.'); }
+    e.target.value = '';
+  };
+  r.readAsText(f);
+});
+
+/* ---------- Routing ---------- */
+const PAGES = ['home', 'tasks', 'leave'];
+let page = 'home';
+function route() {
+  const h = location.hash.slice(1);
+  page = PAGES.includes(h) ? h : 'home';
+  PAGES.forEach(p => { $('#page-' + p).classList.toggle('on', p === page); const a = $(`[data-nav="${p}"]`); if (p === page) a.setAttribute('aria-current', 'page'); else a.removeAttribute('aria-current'); });
+  document.title = page === 'home' ? 'Planner' : `${page === 'tasks' ? 'Tasks' : 'Leave'} | Planner`;
+  renderAll();
+}
+function renderAll() {
+  const d = todayD();
+  $('#barDate').textContent = `${DOW_LONG[d.getDay()]} ${d.getDate()} ${MON_LONG[d.getMonth()]} ${d.getFullYear()}`;
+  if (page === 'home') renderHome();
+  if (page === 'tasks') renderTasks();
+  if (page === 'leave') renderLeave();
+}
+window.addEventListener('hashchange', route);
+route();
+refreshBH();
+</script>
+</body>
+</html>
