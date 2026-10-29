@@ -247,6 +247,11 @@ textarea { resize: vertical; }
 .days5 label { display: flex; flex-direction: column; gap: 3px; font-size: 0.82rem; font-weight: 600; color: var(--ink-2); }
 .help { font-size: 0.86rem; color: var(--ink-2); margin: 0; }
 
+/* Project groups */
+.subbar { flex-basis: 100%; display: flex; gap: 6px; flex-wrap: wrap; padding: 6px 0 0 14px; border-left: 2px solid var(--line); margin-left: 8px; }
+.groups { display: grid; gap: 6px; margin-top: 12px; max-height: 55vh; overflow-y: auto; }
+.grow { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1.4fr); gap: 10px; align-items: center; font-weight: 600; font-size: 0.92rem; }
+
 /* Trip day editor */
 .paint { display: flex; gap: 6px; align-items: center; flex-wrap: wrap; margin-bottom: 6px; }
 .paint-btn { border: 1px solid var(--line); background: var(--surface); border-radius: 999px; padding: 2px 10px; font-weight: 600; font-size: 0.86rem; }
@@ -340,7 +345,7 @@ dialog h2 { margin-bottom: 14px; font-size: 1.25rem; }
       <label for="dumpInput" class="sr">Add tasks</label>
       <textarea id="dumpInput" placeholder="Dump everything here, one task per line. Paste a list from a Claude chat and it splits it for you."></textarea>
       <div class="dump-row">
-        <p class="dump-help">Optional on each line: <code>#project</code> to tag it, <code>@George</code> if you are waiting on someone, <code>26/10</code> for a date, <code>!</code> if the date is a hard deadline.</p>
+        <p class="dump-help">Optional on each line: <code>#project</code> or <code>#Group/Project</code> to tag it (hyphens for spaces), <code>@George</code> if you are waiting on someone, <code>26/10</code> for a date, <code>!</code> if the date is a hard deadline.</p>
         <label class="small muted" for="dumpLane">Put in</label>
         <select id="dumpLane">
           <option value="inbox">To sort</option>
@@ -440,7 +445,7 @@ dialog h2 { margin-bottom: 14px; font-size: 1.25rem; }
       <label class="field"><span>Task</span><input type="text" id="fTitle" required></label>
       <label class="field"><span>Note</span><textarea id="fNote" rows="2"></textarea></label>
       <div class="two">
-        <label class="field"><span>Project</span><input type="text" id="fTag" list="tagList" placeholder="e.g. CoE"></label>
+        <label class="field"><span>Project</span><input type="text" id="fTag" list="tagList" placeholder="e.g. Welsh Gov/F&amp;D PCFT"></label>
         <label class="field"><span>List</span>
           <select id="fLane">
             <option value="inbox">To sort</option><option value="now">Now</option><option value="week">This week</option>
@@ -465,6 +470,20 @@ dialog h2 { margin-bottom: 14px; font-size: 1.25rem; }
   </form>
 </dialog>
 <datalist id="tagList"></datalist>
+
+<!-- Group projects dialog -->
+<dialog id="groupDlg" aria-labelledby="groupDlgTitle">
+  <form method="dialog" id="groupForm">
+    <h2 id="groupDlgTitle">Group projects</h2>
+    <p class="help">Put a project inside a group with a slash. <strong>Welsh Gov/F&amp;D PCFT</strong> puts F&amp;D PCFT under Welsh Gov. Renaming here updates every task with that project.</p>
+    <div class="groups" id="groupRows"></div>
+    <div class="dialog-actions">
+      <span class="spacer"></span>
+      <button type="button" class="btn" id="groupCancel">Cancel</button>
+      <button type="submit" class="btn btn-primary">Save groups</button>
+    </div>
+  </form>
+</dialog>
 
 <!-- Trip dialog -->
 <dialog id="tripDlg" aria-labelledby="tripDlgTitle">
@@ -549,13 +568,17 @@ let tagFilter = null;
 const LANE_NAMES = { inbox: 'To sort', now: 'Now', week: 'This week', later: 'Later', waiting: 'Waiting on', ongoing: 'Ongoing', done: 'Done' };
 const saveTasks = () => { store(TKEY, T); renderAll(); };
 const findTask = id => T.items.find(t => t.id === id);
-const hue = s => { let h = 0; for (const c of s.toLowerCase()) h = (h * 31 + c.charCodeAt(0)) % 360; return h; };
+const hue = s => { let h = 0; for (const c of s.split('/')[0].trim().toLowerCase()) h = (h * 31 + c.charCodeAt(0)) % 360; return h; };
+const normTag = s => String(s || '').split('/').map(x => x.trim()).filter(Boolean).join('/');
+const tagTop = s => s.split('/')[0];
+const tagLabel = s => s.split('/').join(' \u203a ');
+const tagMatch = (tag, f) => !f || tag === f || (tag || '').startsWith(f + '/');
 
 function parseLine(raw, lane) {
   let s = raw.replace(/\*\*/g, '').replace(/^\s*(?:[-*\u2022\u2013]|\d+[.)])\s+/, '').trim();
   if (!s) return null;
   const t = { id: uid(), title: '', note: '', tag: '', lane, due: null, hard: false, quick: false, drain: false, who: '', since: null, created: todayS() };
-  s = s.replace(/(^|\s)#([\w&'-]+)/, (m, p, tag) => { t.tag = tag.replace(/-/g, ' '); return p; });
+  s = s.replace(/(^|\s)#([\w&'\/-]+)/, (m, p, tag) => { t.tag = normTag(tag.replace(/-/g, ' ')); return p; });
   s = s.replace(/(^|\s)@([\w'-]+)/, (m, p, who) => { t.who = who; t.lane = 'waiting'; t.since = todayS(); return p; });
   s = s.replace(/(^|\s)(\d{1,2})\/(\d{1,2})(?:\/(\d{2}|\d{4}))?(?=[\s,.]|$)/, (m, p, d, mo, y) => {
     d = +d; mo = +mo;
@@ -598,7 +621,7 @@ function itemHTML(t, opts = {}) {
   const ongoing = t.lane === 'ongoing';
   const done = t.lane === 'done' || (ongoing && t.weekDone === thisWeek());
   const meta = [];
-  if (t.tag) meta.push(`<span class="tag" style="--h:${hue(t.tag)}">${esc(t.tag)}</span>`);
+  if (t.tag) meta.push(`<span class="tag" style="--h:${hue(t.tag)}">${esc(tagLabel(t.tag))}</span>`);
   if (t.due && t.lane !== 'done') meta.push(dueChip(t));
   if (t.lane === 'waiting') meta.push(`<span class="who">${t.who ? esc(t.who) : 'Add who'}${t.since ? ', ' + waitText(t.since) : ''}</span>`);
   if (ongoing && !done) meta.push('<span class="soft">Not touched this week</span>');
@@ -645,12 +668,19 @@ function renderLane(lane, items) {
 }
 
 function renderTasks() {
+  const allTags = [...new Set(T.items.filter(t => t.tag).map(t => t.tag))].sort((a, b) => a.localeCompare(b));
   const tags = [...new Set(T.items.filter(t => t.lane !== 'done' && t.tag).map(t => t.tag))].sort((a, b) => a.localeCompare(b));
-  if (tagFilter && !tags.includes(tagFilter)) tagFilter = null;
-  $('#tagList').innerHTML = tags.map(t => `<option value="${esc(t)}">`).join('');
-  $('#toolbar').innerHTML = (tags.length ? `<button class="chip-btn" data-tag="" aria-pressed="${!tagFilter}">All projects</button>` + tags.map(t => `<button class="chip-btn" data-tag="${esc(t)}" aria-pressed="${tagFilter === t}">${esc(t)}</button>`).join('') : '') +
-    `<span class="spacer"></span><button class="btn btn-sm" id="copyBtn">Copy list for Claude</button>`;
-  const vis = T.items.filter(t => !tagFilter || t.tag === tagFilter);
+  if (tagFilter && !tags.some(t => tagMatch(t, tagFilter))) tagFilter = null;
+  $('#tagList').innerHTML = allTags.map(t => `<option value="${esc(t)}">`).join('');
+  const tops = [...new Set(tags.map(tagTop))];
+  const curTop = tagFilter ? tagTop(tagFilter) : null;
+  const subs = curTop ? tags.filter(t => t.startsWith(curTop + '/')).map(t => t.slice(curTop.length + 1)) : [];
+  const chip = (val, label, on) => `<button class="chip-btn" data-tag="${esc(val)}" aria-pressed="${on}">${esc(label)}</button>`;
+  let bar = tags.length ? chip('', 'All projects', !tagFilter) + tops.map(tp => chip(tp, tp + (tags.some(t => t.startsWith(tp + '/')) ? ' \u25be' : ''), curTop === tp)).join('') : '';
+  bar += `<span class="spacer"></span>${allTags.length ? '<button class="btn btn-sm" id="groupBtn">Group projects</button>' : ''}<button class="btn btn-sm" id="copyBtn">Copy for Claude</button><button class="btn btn-sm" id="updateBtn">Download update for Claude</button>`;
+  if (subs.length) bar += `<div class="subbar">${chip(curTop, 'All of ' + curTop, tagFilter === curTop)}${[...new Set(subs.map(x => x.split('/')[0]))].map(x => chip(curTop + '/' + x, x, tagFilter === curTop + '/' + x || (tagFilter || '').startsWith(curTop + '/' + x + '/'))).join('')}</div>`;
+  $('#toolbar').innerHTML = bar;
+  const vis = T.items.filter(t => tagMatch(t.tag, tagFilter));
   ['inbox', 'now', 'week', 'later', 'waiting', 'ongoing'].forEach(l => renderLane(l, vis.filter(t => t.lane === l)));
 
   // Deadlines
@@ -702,7 +732,7 @@ $('#taskForm').addEventListener('submit', e => {
   const t = findTask(editingId); if (!t) return;
   const title = $('#fTitle').value.trim(); if (!title) { e.preventDefault(); return; }
   const newLane = $('#fLane').value;
-  Object.assign(t, { title, note: $('#fNote').value.trim(), tag: $('#fTag').value.trim(), due: $('#fDue').value || null, who: $('#fWho').value.trim(), hard: $('#fHard').checked, quick: $('#fQuick').checked, drain: $('#fDrain').checked });
+  Object.assign(t, { title, note: $('#fNote').value.trim(), tag: normTag($('#fTag').value), due: $('#fDue').value || null, who: $('#fWho').value.trim(), hard: $('#fHard').checked, quick: $('#fQuick').checked, drain: $('#fDrain').checked });
   if (newLane !== t.lane) moveTaskQuiet(t, newLane);
   editingId = null; saveTasks(); toast('Task saved');
 });
@@ -720,29 +750,74 @@ $('#fDelete').onclick = () => {
   toast('Task deleted', 'Undo', () => { T.items.splice(idx, 0, t); saveTasks(); });
 };
 
-function copyForClaude() {
-  const by = l => sortLane(T.items.filter(t => t.lane === l));
+function buildUpdate() {
+  const d = todayD(), since = T.lastExport || null;
+  const longDate = x => { const y = parseD(x); return `${DOW_LONG[y.getDay()]} ${y.getDate()} ${MON_LONG[y.getMonth()]} ${y.getFullYear()}`; };
+  const LANE_TXT = { now: 'Now', week: 'This week', later: 'Later', waiting: 'Waiting', ongoing: 'Ongoing', inbox: 'Not sorted' };
+  const LANE_ORDER = ['now', 'week', 'waiting', 'ongoing', 'later', 'inbox'];
   const line = t => {
-    const bits = [t.title];
-    if (t.tag) bits.push(`(${t.tag})`);
-    if (t.due) bits.push(`[${t.hard ? 'deadline' : 'aim'} ${fmt(t.due, true)}]`);
-    if (t.lane === 'waiting') bits.push(`waiting on ${t.who || 'someone'}${t.since ? ' since ' + fmt(t.since) : ''}`);
-    if (t.lane === 'ongoing') bits.push(t.weekDone === thisWeek() ? '(done this week)' : '(not touched this week)');
-    if (t.quick) bits.push('(quick win)');
-    if (t.drain) bits.push('(draining)');
-    if (t.note) bits.push(`: ${t.note}`);
-    return '- ' + bits.join(' ');
+    const bits = [`[${LANE_TXT[t.lane]}] ${t.title}`];
+    if (t.due) bits.push(`${t.hard ? 'deadline' : 'aim'} ${fmt(t.due, true)}`);
+    if (t.lane === 'waiting') bits.push(`waiting on ${t.who || 'someone'}${t.since ? ' ' + waitText(t.since) : ''}`);
+    if (t.lane === 'ongoing') bits.push(t.weekDone === thisWeek() ? 'done this week' : 'not touched this week');
+    if (t.quick) bits.push('quick win');
+    if (t.drain) bits.push('draining');
+    if (t.created && since && t.created > since) bits.push('new');
+    return `- ${bits.join(', ')}${t.note ? `. Note: ${t.note}` : ''}`;
   };
-  const d = todayD();
-  let out = `**Action list, ${DOW_LONG[d.getDay()]} ${d.getDate()} ${MON_LONG[d.getMonth()]} ${d.getFullYear()}**\n`;
-  [['now', 'Now'], ['week', 'This week'], ['waiting', 'Waiting on others'], ['ongoing', 'Ongoing'], ['later', 'Later, when there is space'], ['inbox', 'Not sorted yet']].forEach(([l, h]) => {
-    const items = by(l); if (items.length) out += `\n**${h}**\n${items.map(line).join('\n')}\n`;
-  });
-  const recent = T.items.filter(t => t.lane === 'done' && t.doneAt && diffDays(t.doneAt, todayS()) <= 7);
-  if (recent.length) out += `\n**Done in the last week**\n${recent.map(t => '- ' + t.title).join('\n')}\n`;
-  const fallback = () => { const ta = document.createElement('textarea'); ta.value = out; document.body.appendChild(ta); ta.select(); try { document.execCommand('copy'); toast('List copied. Paste it into Claude.'); } catch (e) { toast('Copy failed. Select the text manually.'); } ta.remove(); };
-  if (navigator.clipboard && window.isSecureContext) navigator.clipboard.writeText(out).then(() => toast('List copied. Paste it into Claude.'), fallback); else fallback();
+  const groupOut = (items, fmtLine, sortFn) => {
+    const byTop = {};
+    items.forEach(t => { const tag = t.tag || 'No project'; const top = tagTop(tag); const sub = tag.slice(top.length + 1) || ''; ((byTop[top] = byTop[top] || {})[sub] = byTop[top][sub] || []).push(t); });
+    let o = '';
+    Object.keys(byTop).sort((a, b) => a === 'No project' ? 1 : b === 'No project' ? -1 : a.localeCompare(b)).forEach(top => {
+      o += `\n### ${top}\n`;
+      Object.keys(byTop[top]).sort().forEach(sub => {
+        if (sub) o += `\n**${tagLabel(sub)}**\n`;
+        o += byTop[top][sub].sort(sortFn).map(fmtLine).join('\n') + '\n';
+      });
+    });
+    return o;
+  };
+  const doneSince = T.items.filter(t => t.lane === 'done' && t.doneAt && (since ? t.doneAt > since : diffDays(t.doneAt, todayS()) <= 14));
+  const open = T.items.filter(t => t.lane !== 'done');
+  let out = `# Planner update, ${longDate(ymd(d))}\n\n`;
+  out += since ? `Covers changes since my last update on ${longDate(since)}.\n` : `First update from the planner. Done items cover the last two weeks.\n`;
+  out += `Open tasks: ${open.length}. In Now: ${open.filter(t => t.lane === 'now').length}. Waiting on others: ${open.filter(t => t.lane === 'waiting').length}. Done ${since ? 'since last update' : 'in the last two weeks'}: ${doneSince.length}.\n`;
+  const overdue = open.filter(t => t.due && t.due < todayS());
+  if (overdue.length) out += `Past their date: ${overdue.map(t => `${t.title} (${fmt(t.due)})`).join('; ')}.\n`;
+  out += `\n## Done ${since ? 'since last update' : 'in the last two weeks'}\n`;
+  out += doneSince.length ? groupOut(doneSince, t => `- ${t.title} (done ${fmt(t.doneAt)})`, (a, b) => a.doneAt.localeCompare(b.doneAt)) : '\nNothing ticked off.\n';
+  out += `\n## Open work by project\n`;
+  out += open.length ? groupOut(open, line, (a, b) => LANE_ORDER.indexOf(a.lane) - LANE_ORDER.indexOf(b.lane) || (a.due || '9').localeCompare(b.due || '9')) : '\nNo open tasks.\n';
+  return out;
 }
+function copyText(out, okMsg) {
+  const fallback = () => { const ta = document.createElement('textarea'); ta.value = out; document.body.appendChild(ta); ta.select(); try { document.execCommand('copy'); toast(okMsg); } catch (e) { toast('Copy failed. Use Download update instead.'); } ta.remove(); };
+  if (navigator.clipboard && window.isSecureContext) navigator.clipboard.writeText(out).then(() => toast(okMsg), fallback); else fallback();
+}
+function copyForClaude() { copyText(buildUpdate(), 'Copied. Paste it into Claude.'); }
+function downloadUpdate() {
+  const out = buildUpdate();
+  const blob = new Blob([out], { type: 'text/markdown' });
+  const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = `planner-update-${todayS()}.md`;
+  document.body.appendChild(a); a.click(); a.remove(); setTimeout(() => URL.revokeObjectURL(a.href), 1000);
+  T.lastExport = todayS(); store(TKEY, T);
+  toast('Update downloaded. Upload it to a Claude chat.');
+}
+
+/* Group projects */
+function openGroups() {
+  const tags = [...new Set(T.items.filter(t => t.tag).map(t => t.tag))].sort((a, b) => a.localeCompare(b));
+  $('#groupRows').innerHTML = tags.map(t => `<div class="grow"><span>${esc(tagLabel(t))}</span><input type="text" data-old="${esc(t)}" value="${esc(t)}" aria-label="New name for ${esc(t)}"></div>`).join('');
+  $('#groupDlg').showModal();
+}
+$('#groupForm').addEventListener('submit', () => {
+  const map = {};
+  document.querySelectorAll('#groupRows input').forEach(i => { const n = normTag(i.value); if (n && n !== i.dataset.old) map[i.dataset.old] = n; });
+  let n = 0; T.items.forEach(t => { if (map[t.tag]) { t.tag = map[t.tag]; n++; } });
+  tagFilter = null; saveTasks(); toast(n ? `Updated ${plural(n, 'task')}` : 'No changes');
+});
+$('#groupCancel').onclick = () => $('#groupDlg').close();
 
 /* Task events */
 $('#dumpAdd').onclick = addFromDump;
@@ -752,6 +827,8 @@ $('#page-tasks').addEventListener('click', e => {
   const chip = e.target.closest('[data-tag]');
   if (chip) { tagFilter = chip.dataset.tag || null; renderTasks(); return; }
   if (e.target.id === 'copyBtn') { copyForClaude(); return; }
+  if (e.target.id === 'updateBtn') { downloadUpdate(); return; }
+  if (e.target.id === 'groupBtn') { openGroups(); return; }
   if (e.target.id === 'clearDone') {
     if (!confirm('Clear all done tasks? This cannot be undone.')) return;
     T.items = T.items.filter(t => t.lane !== 'done'); saveTasks(); return;
