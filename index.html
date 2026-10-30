@@ -342,6 +342,10 @@ table.proj .pname:hover { text-decoration: underline; }
 .split-bar .deep { background: var(--moss); }
 .split-bar .drain { background: var(--heather); }
 
+/* Quick dates */
+.quick-dates { margin-top: 4px; }
+.quick-dates .chip-btn { padding: 1px 8px; font-size: 0.8rem; }
+
 /* Project groups */
 .subbar { flex-basis: 100%; display: flex; gap: 6px; flex-wrap: wrap; padding: 6px 0 0 14px; border-left: 2px solid var(--line); margin-left: 8px; }
 .groups { display: grid; gap: 6px; margin-top: 12px; max-height: 55vh; overflow-y: auto; }
@@ -455,6 +459,7 @@ dialog h2 { margin-bottom: 14px; font-size: 1.25rem; }
           <option value="inbox">To sort</option>
           <option value="now">Now</option>
           <option value="week">This week</option>
+          <option value="next">Next week</option>
           <option value="later">Later</option>
         </select>
         <button class="btn btn-primary" id="dumpAdd">Add tasks</button>
@@ -468,6 +473,7 @@ dialog h2 { margin-bottom: 14px; font-size: 1.25rem; }
         <section class="lane lane-sort" data-lane="inbox" id="lane-inbox" hidden></section>
         <section class="lane lane-now" data-lane="now" id="lane-now"></section>
         <section class="lane" data-lane="week" id="lane-week"></section>
+        <section class="lane" data-lane="next" id="lane-next"></section>
         <section class="lane" data-lane="later" id="lane-later"></section>
         <details class="done-wrap" id="doneWrap"></details>
         <details class="done-wrap" id="snoozeWrap"></details>
@@ -636,13 +642,13 @@ dialog h2 { margin-bottom: 14px; font-size: 1.25rem; }
         <label class="field"><span>Project</span><input type="text" id="fTag" list="tagList" placeholder="e.g. Welsh Gov/F&amp;D PCFT"></label>
         <label class="field"><span>List</span>
           <select id="fLane">
-            <option value="inbox">To sort</option><option value="now">Now</option><option value="week">This week</option>
+            <option value="inbox">To sort</option><option value="now">Now</option><option value="week">This week</option><option value="next">Next week</option><option value="next">Next week</option>
             <option value="later">Later</option><option value="waiting">Waiting on</option><option value="ongoing">Ongoing</option><option value="done">Done</option>
           </select>
         </label>
       </div>
       <div class="two">
-        <label class="field"><span>Date</span><input type="date" id="fDue"></label>
+        <div class="field"><span>Date</span><input type="date" id="fDue"><span class="chips quick-dates" data-for="fDue"></span></div>
         <label class="field"><span>Waiting on</span><input type="text" id="fWho" placeholder="Name"></label>
       </div>
       <div class="two">
@@ -652,7 +658,7 @@ dialog h2 { margin-bottom: 14px; font-size: 1.25rem; }
         </label>
       </div>
       <div class="two">
-        <label class="field"><span>Hide until (snooze)</span><input type="date" id="fSnooze"></label>
+        <div class="field"><span>Hide until (snooze)</span><input type="date" id="fSnooze"><span class="chips quick-dates" data-for="fSnooze"></span></div>
         <label class="field"><span>Repeats</span>
           <select id="fRepeat"><option value="">Does not repeat</option><option value="weekly">Every week</option><option value="fortnightly">Every two weeks</option><option value="monthly">Every month</option></select>
         </label>
@@ -820,7 +826,7 @@ T.time = T.time || [];
 T.entered = T.entered || {};
 T.settings = Object.assign({ hoursPerDay: 7.5, cols: 'dhn' }, T.settings || {});
 let tagFilter = null;
-const LANE_NAMES = { inbox: 'To sort', now: 'Now', week: 'This week', later: 'Later', waiting: 'Waiting on', ongoing: 'Ongoing', done: 'Done' };
+const LANE_NAMES = { inbox: 'To sort', now: 'Now', week: 'This week', next: 'Next week', later: 'Later', waiting: 'Waiting on', ongoing: 'Ongoing', done: 'Done' };
 const saveTasks = () => { store(TKEY, T); renderAll(); };
 const findTask = id => T.items.find(t => t.id === id);
 const hue = s => { let h = 0; for (const c of s.split('/')[0].trim().toLowerCase()) h = (h * 31 + c.charCodeAt(0)) % 360; return h; };
@@ -877,6 +883,7 @@ function addFromDump() {
   const lines = $('#dumpInput').value.split(/\r?\n/);
   const added = lines.map(l => parseLine(l, lane)).filter(Boolean);
   if (!added.length) { toast('Type at least one task first.'); return; }
+  added.forEach(t => { if (t.lane === 'next') t.nextWeek = ymd(addDays(mondayOf(todayD()), 7)); });
   T.items.push(...added);
   $('#dumpInput').value = ''; $('#dumpInput').classList.remove('has-text');
   saveTasks();
@@ -910,7 +917,7 @@ function itemHTML(t, opts = {}) {
   if (t.quick) meta.push('<span class="flag">Quick win</span>');
   if (t.drain) meta.push('<span class="flag flag-drain">Draining</span>');
   const checkLabel = ongoing ? (done ? 'Mark not done this week' : 'Mark done this week') : (t.lane === 'done' ? 'Move back' : 'Mark done');
-  const triage = opts.triage ? `<div class="triage">${['now', 'week', 'later', 'waiting', 'ongoing'].map(l => `<button class="btn btn-sm" data-act="move" data-lane="${l}">${LANE_NAMES[l]}</button>`).join('')}</div>` : '';
+  const triage = opts.triage ? `<div class="triage">${['now', 'week', 'next', 'later', 'waiting', 'ongoing'].map(l => `<button class="btn btn-sm" data-act="move" data-lane="${l}">${LANE_NAMES[l]}</button>`).join('')}</div>` : '';
   return `<li class="item${done ? ' is-done' : ''}" draggable="true" data-id="${t.id}">
     <button class="check" data-act="check" aria-pressed="${done}" aria-label="${checkLabel}: ${esc(t.title)}"></button>
     <div style="flex:1;min-width:0">
@@ -933,6 +940,7 @@ const LANE_INFO = {
   inbox: { empty: '', hint: 'Pick where each one goes' },
   now: { empty: 'Nothing in Now. Pull one to three things up from This week.', hint: 'Keep to three' },
   week: { empty: 'Nothing planned for this week yet.', hint: '' },
+  next: { empty: 'Nothing lined up for next week. These move into This week on Monday.', hint: 'Moves up on Monday' },
   later: { empty: 'Nothing parked. Things for when there is space go here.', hint: 'When there is space' },
   waiting: { empty: 'Not waiting on anyone.', hint: 'Chase when it goes stale' },
   ongoing: { empty: 'No recurring work. Add weekly things like a pipeline check here.', hint: 'Ticks reset each Monday' }
@@ -966,7 +974,7 @@ function renderTasks() {
   if (subs.length) bar += `<div class="subbar">${chip(curTop, 'All of ' + curTop, tagFilter === curTop)}${[...new Set(subs.map(x => x.split('/')[0]))].map(x => chip(curTop + '/' + x, x, tagFilter === curTop + '/' + x || (tagFilter || '').startsWith(curTop + '/' + x + '/'))).join('')}</div>`;
   $('#toolbar').innerHTML = bar;
   const vis = T.items.filter(t => !t.owner && !(t.lane === 'done' && t.cleared) && !isSnoozed(t) && tagMatch(t.tag, tagFilter));
-  ['inbox', 'now', 'week', 'later', 'waiting', 'ongoing'].forEach(l => renderLane(l, vis.filter(t => t.lane === l)));
+  ['inbox', 'now', 'week', 'next', 'later', 'waiting', 'ongoing'].forEach(l => renderLane(l, vis.filter(t => t.lane === l)));
 
   // Deadlines
   const dl = vis.filter(t => t.due && t.lane !== 'done').sort((a, b) => a.due.localeCompare(b.due)).slice(0, 10);
@@ -1010,6 +1018,7 @@ function completeTask(t) {
 
 function moveTask(t, lane) {
   if (t.lane === lane) return;
+  if (lane === 'next') t.nextWeek = ymd(addDays(mondayOf(todayD()), 7));
   if (lane === 'waiting' && !t.since) t.since = todayS();
   if (lane !== 'waiting') t.since = null;
   if (lane === 'done') { t.prevLane = t.lane; t.doneAt = todayS(); }
@@ -1028,6 +1037,7 @@ function openTask(id, focusId) {
   $('#fOwner').innerHTML = `<option value="">Me</option>` + T.team.map(m => `<option value="${esc(m.name)}">${esc(m.name)}</option>`).join('');
   $('#fOwner').value = t.owner || ''; $('#fSize').value = t.size || '';
   $('#fSnooze').value = t.snooze || ''; $('#fRepeat').value = t.repeat || '';
+  renderQuickDates();
   $('#taskDlg').showModal();
   if (focusId) $('#' + focusId).focus();
 }
@@ -1040,6 +1050,7 @@ $('#taskForm').addEventListener('submit', e => {
   editingId = null; saveTasks(); toast('Task saved');
 });
 function moveTaskQuiet(t, lane) {
+  if (lane === 'next') t.nextWeek = ymd(addDays(mondayOf(todayD()), 7));
   if (lane === 'waiting' && !t.since) t.since = todayS();
   if (lane !== 'waiting') t.since = null;
   if (lane === 'done') { t.prevLane = t.lane; t.doneAt = todayS(); }
@@ -1056,8 +1067,8 @@ $('#fDelete').onclick = () => {
 function buildUpdate() {
   const d = todayD(), since = T.lastExport || null;
   const longDate = x => { const y = parseD(x); return `${DOW_LONG[y.getDay()]} ${y.getDate()} ${MON_LONG[y.getMonth()]} ${y.getFullYear()}`; };
-  const LANE_TXT = { now: 'Now', week: 'This week', later: 'Later', waiting: 'Waiting', ongoing: 'Ongoing', inbox: 'Not sorted' };
-  const LANE_ORDER = ['now', 'week', 'waiting', 'ongoing', 'later', 'inbox'];
+  const LANE_TXT = { now: 'Now', week: 'This week', next: 'Next week', later: 'Later', waiting: 'Waiting', ongoing: 'Ongoing', inbox: 'Not sorted' };
+  const LANE_ORDER = ['now', 'week', 'next', 'waiting', 'ongoing', 'later', 'inbox'];
   const line = t => {
     const bits = [`[${LANE_TXT[t.lane]}] ${t.title}`];
     if (t.due) bits.push(`${t.hard ? 'deadline' : 'aim'} ${fmt(t.due, true)}`);
@@ -1561,7 +1572,8 @@ function myAvailable(mon) {
   return Math.max(0, base - off);
 }
 function capacityFor(owner, avail, mon) {
-  const items = T.items.filter(t => (t.owner || '') === owner && (t.lane === 'now' || t.lane === 'week') && !(t.snooze && t.snooze > ymd(addDays(parseD(mon), 4))));
+  const planningNext = mon > ymd(mondayOf(todayD()));
+  const items = T.items.filter(t => (t.owner || '') === owner && (t.lane === 'now' || t.lane === 'week' || (planningNext && t.lane === 'next')) && !(t.snooze && t.snooze > ymd(addDays(parseD(mon), 4))));
   const load = items.reduce((a, t) => a + (SIZE_DAYS[t.size] || 0), 0);
   return { monday: mon, avail, load, unsized: items.filter(t => !t.size).length };
 }
@@ -1827,7 +1839,7 @@ function renderReview() {
   const nextTrips = L.trips.filter(t => t.start <= ymd(addDays(parseD(next), 4)) && t.end >= next);
   const bh = []; for (let i = 0; i < 5; i++) { const k = ymd(addDays(parseD(next), i)); if (BH.has(k)) bh.push(fmt(k)); }
   const dl = T.items.filter(t => !t.owner && t.due && t.lane !== 'done' && t.due <= nextEnd).sort((a, b) => a.due.localeCompare(b.due));
-  const wk = T.items.filter(t => !t.owner && (t.lane === 'week' || t.lane === 'now'));
+  const wk = T.items.filter(t => !t.owner && (t.lane === 'week' || t.lane === 'now' || t.lane === 'next'));
   const capN = capacityFor('', myAvailable(next), next);
   steps.push({ ok: false, h: 'Plan next week', b: `${nextTrips.length || bh.length ? `<p class="help">Off next week: ${[...nextTrips.map(t => t.name), ...bh.map(b => 'bank holiday ' + b)].map(esc).join(', ')}.</p>` : ''}
     ${dl.length ? `<p class="help"><strong>Dates by ${fmt(nextEnd)}:</strong> ${dl.map(t => `${esc(t.title)} (${fmt(t.due)})`).join('; ')}</p>` : ''}
@@ -2013,7 +2025,26 @@ $('#page-day').addEventListener('click', e => {
 const PAGES = ['home', 'tasks', 'projects', 'team', 'time', 'wins', 'leave', 'review', 'day'];
 const PAGE_TITLES = { projects: 'Projects', day: 'End of day', tasks: 'Tasks', team: 'Team', time: 'Timesheets', wins: 'Wins', leave: 'Leave', review: 'Friday review' };
 let page = 'home';
+function quickDates() {
+  const d = todayD(), out = [['Today', d], ['Tomorrow', addDays(d, 1)]];
+  const nextMon = addDays(mondayOf(d), 7);
+  for (let i = 1; i <= 5; i++) { const x = addDays(mondayOf(d), i - 1); if (ymd(x) > ymd(addDays(d, 1))) out.push([DOW[x.getDay()], x]); }
+  out.push(['Next Mon', nextMon], ['Next Fri', addDays(nextMon, 4)]);
+  return out;
+}
+function renderQuickDates() {
+  document.querySelectorAll('.quick-dates').forEach(el => {
+    el.innerHTML = quickDates().map(([l, x]) => `<button type="button" class="chip-btn" data-qd="${ymd(x)}" title="${fmt(ymd(x), true)}">${l}</button>`).join('') + '<button type="button" class="chip-btn" data-qd="">Clear</button>';
+  });
+}
+document.addEventListener('click', e => { const b = e.target.closest('[data-qd]'); if (!b) return; const inp = $('#' + b.closest('.quick-dates').dataset.for); inp.value = b.dataset.qd; });
+function rollNextWeek() {
+  const mon = ymd(mondayOf(todayD())); let n = 0;
+  T.items.forEach(t => { if (t.lane === 'next' && (!t.nextWeek || t.nextWeek <= mon)) { t.lane = 'week'; t.nextWeek = null; n++; } });
+  if (n) store(TKEY, T);
+}
 function route() {
+  rollNextWeek();
   const h = location.hash.slice(1);
   page = PAGES.includes(h) ? h : 'home';
   PAGES.forEach(p => { $('#page-' + p).classList.toggle('on', p === page); const a = $(`[data-nav="${p}"]`); if (!a) return; if (p === page) a.setAttribute('aria-current', 'page'); else a.removeAttribute('aria-current'); });
