@@ -540,6 +540,7 @@ dialog h2 { margin-bottom: 14px; font-size: 1.25rem; }
       <div class="pattern-body">
         <div class="two">
           <label class="field"><span>Hours in a working day</span><input type="number" id="sHours" step="0.25" min="1" max="12"></label>
+          <label class="field"><span>Days you plan to work a week (for capacity)</span><input type="number" id="sPlanDays" step="0.5" min="0.5" max="5"></label>
           <label class="field"><span>Column order when you copy rows</span>
             <select id="sCols">
               <option value="dhn">Date, Hours, Description</option>
@@ -549,6 +550,7 @@ dialog h2 { margin-bottom: 14px; font-size: 1.25rem; }
             </select>
           </label>
         </div>
+        <p class="help">Planning days only drive the capacity bars. Leave is still counted from your contracted pattern on the Leave page.</p>
         <p class="help">Copy rows puts the entries on your clipboard as columns. Click the first empty cell in the project timesheet and paste.</p>
       </div>
     </details>
@@ -1564,6 +1566,11 @@ const SIZE_TXT = { s: 'Small', h: 'Half day', d: 'A day', b: '2 days+' };
 function planMonday() { const d = todayD(), dw = d.getDay(); const m = mondayOf(d); return ymd(dw === 5 || dw === 6 || dw === 0 ? addDays(m, 7) : m); }
 function myAvailable(mon) {
   const m = parseD(mon);
+  if (T.settings.planDays) {
+    let n = 0;
+    for (let i = 0; i < 5; i++) { const k = ymd(addDays(m, i)); if (BH.has(k)) continue; if (L.trips.some(t => k >= t.start && k <= t.end && (t.days || {})[k] !== 'work')) continue; n++; }
+    return Math.round(T.settings.planDays * n / 5 * 2) / 2;
+  }
   let base = 0;
   if (L.settings.mode === 'flex') { let workable = 0; for (let i = 0; i < 5; i++) if (!BH.has(ymd(addDays(m, i)))) workable++; base = Math.min(L.settings.perWeek, workable); }
   else { for (let i = 0; i < 5; i++) if (!BH.has(ymd(addDays(m, i)))) base += L.settings.fixed[i] || 0; }
@@ -1575,13 +1582,13 @@ function capacityFor(owner, avail, mon) {
   const planningNext = mon > ymd(mondayOf(todayD()));
   const items = T.items.filter(t => (t.owner || '') === owner && (t.lane === 'now' || t.lane === 'week' || (planningNext && t.lane === 'next')) && !(t.snooze && t.snooze > ymd(addDays(parseD(mon), 4))));
   const load = items.reduce((a, t) => a + (SIZE_DAYS[t.size] || 0), 0);
-  return { monday: mon, avail, load, unsized: items.filter(t => !t.size).length };
+  return { monday: mon, avail, load, unsized: items.filter(t => !t.size).length, planningNext };
 }
 const myCapacity = () => { const mon = planMonday(); return capacityFor('', myAvailable(mon), mon); };
 function capHTML(c, who) {
   const over = c.load > c.avail;
   const pct = c.avail ? Math.min(100, c.load / c.avail * 100) : (c.load ? 100 : 0);
-  const txt = `${who ? who + ': ' : ''}${num(c.load)} of ${num(c.avail)} days planned for the week of ${fmt(c.monday)}${c.unsized ? `. ${plural(c.unsized, 'task')} without a size` : ''}${over ? `. Over by ${num(c.load - c.avail)} days` : ''}.`;
+  const txt = `${who ? who + ': ' : ''}${num(c.load)} of ${num(c.avail)} days planned for the week of ${fmt(c.monday)}${who ? '' : c.planningNext ? ', counting Now, This week and Next week' : ', counting Now and This week'}${c.unsized ? `. ${plural(c.unsized, 'task')} without a size` : ''}${over ? `. Over by ${num(c.load - c.avail)} days` : ''}.`;
   return `<div class="cap"><div class="cap-bar${over ? ' over' : ''}"><span style="width:${pct}%"></span></div><div class="cap-txt${over ? ' over' : ''}">${txt}</div></div>`;
 }
 
@@ -1672,7 +1679,7 @@ function renderTime() {
   const older = unenteredSheets().filter(m => m.monday < timeWeek);
   $('#timeProjects').innerHTML = (older.length ? `<div class="nudge warn">Earlier weeks not in timesheets yet: ${older.map(m => `${esc(tagLabel(m.tag))}, week of ${fmt(m.monday)}`).join('; ')}<span class="spacer"></span><button class="btn btn-sm" id="goOldest">Go to oldest</button></div><br>` : '') +
     (Object.keys(g).length ? Object.keys(g).sort().map(tag => sheetBlock(timeWeek, tag, g[tag])).join('') : `<p class="empty-note">No time logged this week. Use Log time at the top, or the play button on a task.</p>`);
-  $('#sHours').value = T.settings.hoursPerDay; $('#sCols').value = T.settings.cols;
+  $('#sHours').value = T.settings.hoursPerDay; $('#sCols').value = T.settings.cols; $('#sPlanDays').value = T.settings.planDays || '';
 }
 function sheetAction(e) {
   const b = e.target.closest('[data-ts]'); if (!b) return false;
@@ -1689,6 +1696,7 @@ $('#page-time').addEventListener('click', e => {
 $('#wPrev').onclick = () => { timeWeek = ymd(addDays(parseD(timeWeek), -7)); renderTime(); };
 $('#wNext').onclick = () => { timeWeek = ymd(addDays(parseD(timeWeek), 7)); renderTime(); };
 $('#sHours').addEventListener('change', e => { T.settings.hoursPerDay = parseFloat(e.target.value) || 7.5; store(TKEY, T); renderAll(); });
+$('#sPlanDays').addEventListener('change', e => { T.settings.planDays = parseFloat(e.target.value) || null; store(TKEY, T); renderAll(); });
 $('#sCols').addEventListener('change', e => { T.settings.cols = e.target.value; store(TKEY, T); });
 
 /* ---------- Team page ---------- */
