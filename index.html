@@ -833,7 +833,7 @@ function parseLine(raw, lane) {
   let s = raw.replace(/\*\*/g, '').replace(/^\s*(?:[-*\u2022\u2013]|\d+[.)])\s+/, '').trim();
   if (!s) return null;
   const t = { id: uid(), title: '', note: '', tag: '', lane, due: null, hard: false, quick: false, drain: false, who: '', since: null, created: todayS() };
-  s = s.replace(/(^|\s)#([\w&'\/-]+)/, (m, p, tag) => { t.tag = normTag(tag.replace(/-/g, ' ')); return p; });
+  s = parseTag(s, t);
   s = s.replace(/(^|\s)@([\w'-]+)/, (m, p, who) => { t.who = who; t.lane = 'waiting'; t.since = todayS(); return p; });
   s = s.replace(/(^|\s)(\d{1,2})\/(\d{1,2})(?:\/(\d{2}|\d{4}))?(?=[\s,.]|$)/, (m, p, d, mo, y) => {
     d = +d; mo = +mo;
@@ -846,6 +846,30 @@ function parseLine(raw, lane) {
   s = s.replace(/(^|\s)!(?=\s|$)/, (m, p) => { t.hard = true; return p; });
   t.title = s.replace(/\s{2,}/g, ' ').replace(/[\s,.:;-]+$/, '').trim();
   return t.title ? t : null;
+}
+
+// Tags can contain spaces. Known projects are matched first (longest wins),
+// otherwise a tag with a slash runs to the next @, #, !, date or end of line.
+function parseTag(s, t) {
+  const i = s.search(/(^|\s)#\S/); if (i < 0) return s;
+  const start = s.indexOf('#', i), rest = s.slice(start + 1);
+  const known = [...new Set(T.items.map(x => x.tag).filter(Boolean))].sort((a, b) => b.length - a.length);
+  let tag = null, used = 0;
+  for (const k of known) {
+    const r = rest.slice(0, k.length);
+    if (r.toLowerCase() === k.toLowerCase() && (rest.length === k.length || /\s/.test(rest[k.length]))) { tag = k; used = k.length; break; }
+    const kh = k.replace(/ /g, '-');
+    if (rest.slice(0, kh.length).toLowerCase() === kh.toLowerCase() && (rest.length === kh.length || /\s/.test(rest[kh.length]))) { tag = k; used = kh.length; break; }
+  }
+  if (!tag) {
+    const firstWord = rest.match(/^\S+/)[0];
+    const stop = rest.search(/\s(?=[@#!]|\d{1,2}\/\d{1,2}(?:\/\d{2,4})?(?:[\s,.]|$))/);
+    const seg = stop < 0 ? rest : rest.slice(0, stop);
+    used = seg.includes('/') ? seg.length : firstWord.length;
+    tag = normTag(rest.slice(0, used).replace(/-/g, ' '));
+  }
+  t.tag = tag;
+  return (s.slice(0, start) + ' ' + rest.slice(used)).replace(/\s{2,}/g, ' ');
 }
 
 function addFromDump() {
