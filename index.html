@@ -347,7 +347,7 @@ table.proj .pname:hover { text-decoration: underline; }
 .cards-cap { max-width: 520px; }
 .today-head { display: flex; align-items: baseline; gap: 10px; margin: 4px 0 8px; }
 .today-head h2 { font-size: 1.2rem; }
-.today { display: grid; grid-template-columns: repeat(auto-fit, minmax(230px, 1fr)); gap: 10px; margin-bottom: 16px; }
+.today-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(230px, 1fr)); gap: 10px; margin-bottom: 16px; }
 .tcard { background: var(--surface); border: 1px solid var(--line); border-left: 5px solid var(--gc); border-radius: 0; padding: 12px 14px; display: flex; flex-direction: column; gap: 6px; }
 .tc-proj { font-size: 0.82rem; font-weight: 600; color: var(--gc); }
 .tc-step { background: none; border: 0; padding: 0; text-align: left; font-size: 1.2rem; font-weight: 800; line-height: 1.25; letter-spacing: -0.01em; }
@@ -2112,7 +2112,7 @@ function renderCards() {
   const timing = id => T.timer && T.timer.taskId === id;
   let h = `<div class="today-head"><h2>Today</h2><span class="muted small">${today.length ? 'Your next steps' : 'Pick up to three jobs below with the star'}</span></div>`;
   h += `<div class="cards-cap">${capHTML(myCapacity())}</div>`;
-  h += `<div class="today">${today.map(t => { const s = nextStep(t); return `<div class="tcard" data-id="${t.id}" style="--gc:${groupCol(t.tag)}">
+  h += `<div class="today-grid">${today.map(t => { const s = nextStep(t); return `<div class="tcard" data-id="${t.id}" style="--gc:${groupCol(t.tag)}">
       <div class="tc-proj">${esc(subName(t.tag))}</div>
       <button class="tc-step" data-act="edit">${esc(s ? s.text : t.title)}</button>
       ${s ? `<div class="tc-job">${esc(t.title)}</div>` : ''}
